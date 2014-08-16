@@ -922,6 +922,13 @@ grub_arm_reloc_jump24 (grub_uint32_t *target, Elf32_Addr sym_addr)
   return GRUB_ERR_NONE;
 }
 
+static int grub_image_needs_reloc(const struct grub_install_image_target_desc *target)
+{
+  if (target->id == IMAGE_EFI)
+    return 1;
+  return 0;
+}
+
 #pragma GCC diagnostic ignored "-Wcast-align"
 
 #define MKIMAGE_ELF32 1

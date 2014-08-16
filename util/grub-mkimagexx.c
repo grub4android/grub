@@ -1371,7 +1371,7 @@ SUFFIX (locate_sections) (const char *kernel_path,
 	grub_util_info ("locating the section %s at 0x%"
 			GRUB_HOST_PRIxLONG_LONG,
 			name, (unsigned long long) current_address);
-	if (image_target->id != IMAGE_EFI)
+	if (!grub_image_needs_reloc(image_target))
 	  {
 	    current_address = grub_host_to_target_addr (s->sh_addr)
 	      - image_target->link_addr;
@@ -1413,7 +1413,7 @@ SUFFIX (locate_sections) (const char *kernel_path,
 	grub_util_info ("locating the section %s at 0x%"
 			GRUB_HOST_PRIxLONG_LONG,
 			name, (unsigned long long) current_address);
-	if (image_target->id != IMAGE_EFI)
+	if (!grub_image_needs_reloc(image_target))
 	  current_address = grub_host_to_target_addr (s->sh_addr)
 	    - image_target->link_addr;
 	section_addresses[i] = current_address;
@@ -1486,7 +1486,7 @@ SUFFIX (load_image) (const char *kernel_path, size_t *exec_size,
   for (i = 0; i < num_sections; i++)
     section_vaddresses[i] = section_addresses[i] + image_target->vaddr_offset;
 
-  if (image_target->id != IMAGE_EFI)
+  if (!grub_image_needs_reloc(image_target))
     {
       Elf_Addr current_address = *kernel_sz;
 
@@ -1507,7 +1507,7 @@ SUFFIX (load_image) (const char *kernel_path, size_t *exec_size,
 	    grub_util_info ("locating the section %s at 0x%"
 			    GRUB_HOST_PRIxLONG_LONG,
 			    name, (unsigned long long) current_address);
-	    if (image_target->id != IMAGE_EFI)
+	    if (!grub_image_needs_reloc(image_target))
 	      current_address = grub_host_to_target_addr (s->sh_addr)
 		- image_target->link_addr;
 
@@ -1528,7 +1528,7 @@ SUFFIX (load_image) (const char *kernel_path, size_t *exec_size,
       || image_target->id == IMAGE_SPARC64_CDCORE)
     *kernel_sz = ALIGN_UP (*kernel_sz, image_target->mod_align);
 
-  if (image_target->id == IMAGE_EFI)
+  if (grub_image_needs_reloc(image_target))
     {
       symtab_section = NULL;
       for (i = 0, s = sections;
@@ -1588,7 +1588,7 @@ SUFFIX (load_image) (const char *kernel_path, size_t *exec_size,
 
   out_img = xmalloc (*kernel_sz + total_module_size);
 
-  if (image_target->id == IMAGE_EFI)
+  if (grub_image_needs_reloc(image_target))
     {
       *start = SUFFIX (relocate_symbols) (e, sections, symtab_section,
 					  section_vaddresses, section_entsize,
