@@ -74,6 +74,7 @@ struct grub_install_image_target_desc
       PLATFORM_FLAGS_NONE = 0,
       PLATFORM_FLAGS_DECOMPRESSORS = 2,
       PLATFORM_FLAGS_MODULES_BEFORE_KERNEL = 4,
+      PLATFORM_FLAGS_ABS_RELOC = 8,
     } flags;
   unsigned total_module_size;
   unsigned decompressor_compressed_size;
@@ -922,11 +923,16 @@ grub_arm_reloc_jump24 (grub_uint32_t *target, Elf32_Addr sym_addr)
   return GRUB_ERR_NONE;
 }
 
+static int grub_image_needs_abs_reloc(const struct grub_install_image_target_desc *target)
+{
+  return target->flags & PLATFORM_FLAGS_ABS_RELOC;
+}
+
 static int grub_image_needs_reloc(const struct grub_install_image_target_desc *target)
 {
   if (target->id == IMAGE_EFI)
     return 1;
-  return 0;
+  return grub_image_needs_abs_reloc(target);
 }
 
 #pragma GCC diagnostic ignored "-Wcast-align"
@@ -987,7 +993,8 @@ grub_install_get_image_targets_string (void)
 
 void
 grub_install_generate_image (const char *dir, const char *prefix,
-			     FILE *out, const char *outname, char *mods[],
+			     FILE *out, grub_uint64_t target_address,
+			     const char *outname, char *mods[],
 			     char *memdisk_path, char **pubkey_paths,
 			     size_t npubkeys, char *config_path,
 			     const struct grub_install_image_target_desc *image_target,
@@ -1023,6 +1030,13 @@ grub_install_generate_image (const char *dir, const char *prefix,
     total_module_size = sizeof (struct grub_module_info64);
   else
     total_module_size = sizeof (struct grub_module_info32);
+
+  if (!target_address && grub_image_needs_abs_reloc(image_target))
+    {
+      grub_util_info ("Using default target address 0x%llx",
+                     (unsigned long long)image_target->link_addr);
+      target_address = image_target->link_addr;
+    }
 
   {
     size_t i;
@@ -1069,11 +1083,13 @@ grub_install_generate_image (const char *dir, const char *prefix,
 
   if (image_target->voidp_sizeof == 4)
     kernel_img = load_image32 (kernel_path, &exec_size, &kernel_size, &bss_size,
-			       total_module_size, &start_address, &rel_section,
+			       total_module_size, target_address,
+			       &start_address, &rel_section,
 			       &reloc_size, &align, image_target);
   else
     kernel_img = load_image64 (kernel_path, &exec_size, &kernel_size, &bss_size,
-			       total_module_size, &start_address, &rel_section,
+			       total_module_size, target_address,
+			       &start_address, &rel_section,
 			       &reloc_size, &align, image_target);
   if (image_target->id == IMAGE_XEN && align < 4096)
     align = 4096;

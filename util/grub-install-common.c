@@ -495,8 +495,8 @@ grub_install_make_image_wrap_file (const char *dir, const char *prefix,
   if (!tgt)
     grub_util_error (_("unknown target format %s\n"), mkimage_target);
 
-  grub_install_generate_image (dir, prefix, fp, outname,
-			       modules.entries, memdisk_path,
+  grub_install_generate_image (dir, prefix, fp, 0,
+			       outname, modules.entries, memdisk_path,
 			       pubkeys, npubkeys, config_path, tgt,
 			       note, compression);
   while (dc--)

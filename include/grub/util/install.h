@@ -169,7 +169,7 @@ struct grub_install_image_target_desc;
 
 void
 grub_install_generate_image (const char *dir, const char *prefix,
-			     FILE *out,
+			     FILE *out, grub_uint64_t target_address,
 			     const char *outname, char *mods[],
 			     char *memdisk_path, char **pubkey_paths,
 			     size_t npubkeys,

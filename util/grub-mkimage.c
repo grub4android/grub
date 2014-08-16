@@ -65,6 +65,7 @@ static struct argp_option options[] = {
    /* TRANSLATORS: platform here isn't identifier. It can be translated.  */
    N_("use images and modules under DIR [default=%s/<platform>]"), 0},
   {"prefix",  'p', N_("DIR"), 0, N_("set prefix directory"), 0},
+  {"target-address", 'T', N_("ADDR"), 0, N_("set kernel target address [default=%d]"), 0},
   {"memdisk",  'm', N_("FILE"), 0,
    /* TRANSLATORS: "memdisk" here isn't an identifier, it can be translated.
     "embed" is a verb (command description).  "*/
@@ -124,6 +125,7 @@ struct arguments
   int note;
   const struct grub_install_image_target_desc *image_target;
   grub_compression_t comp;
+  grub_uint64_t target_address;
 };
 
 static error_t
@@ -215,6 +217,10 @@ argp_parser (int key, char *arg, struct argp_state *state)
       arguments->prefix = xstrdup (arg);
       break;
 
+    case 'T':
+      arguments->target_address = strtoull (arg, NULL, 0);
+      break;
+
     case 'v':
       verbosity++;
       break;
@@ -295,6 +301,7 @@ main (int argc, char *argv[])
     }
 
   grub_install_generate_image (arguments.dir, arguments.prefix, fp,
+                   arguments.target_address,
 			       arguments.output, arguments.modules,
 			       arguments.memdisk, arguments.pubkeys,
 			       arguments.npubkeys, arguments.config,
