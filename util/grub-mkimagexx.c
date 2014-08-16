@@ -1481,6 +1481,46 @@ SUFFIX (load_image) (const char *kernel_path, size_t *exec_size,
 						exec_size, kernel_sz, align,
 						image_target);
 
+  if (grub_image_needs_reloc(image_target))
+    {
+#ifdef MKIMAGE_ELF32
+      if (image_target->elf_target == EM_ARM)
+       {
+         grub_size_t tramp;
+
+         *kernel_sz = ALIGN_UP (*kernel_sz, 16);
+
+         tramp = arm_get_trampoline_size (e, sections, section_entsize,
+                                          num_sections, image_target);
+
+         tramp_off = *kernel_sz;
+         *kernel_sz += ALIGN_UP (tramp, 16);
+       }
+#endif
+
+#ifdef MKIMAGE_ELF64
+      if (image_target->elf_target == EM_IA_64)
+       {
+         grub_size_t tramp;
+
+         *kernel_sz = ALIGN_UP (*kernel_sz, 16);
+
+         grub_ia64_dl_get_tramp_got_size (e, &tramp, &got);
+
+         tramp_off = *kernel_sz;
+         *kernel_sz += ALIGN_UP (tramp, 16);
+
+         ia64jmp_off = *kernel_sz;
+         ia64jmpnum = SUFFIX (count_funcs) (e, symtab_section,
+                                            image_target);
+         *kernel_sz += 16 * ia64jmpnum;
+
+         ia64_got_off = *kernel_sz;
+         *kernel_sz += ALIGN_UP (got, 16);
+       }
+#endif
+    }
+
   section_vaddresses = xmalloc (sizeof (*section_addresses) * num_sections);
 
   for (i = 0; i < num_sections; i++)
@@ -1539,43 +1579,6 @@ SUFFIX (load_image) (const char *kernel_path, size_t *exec_size,
 	    symtab_section = s;
 	    break;
 	  }
-
-#ifdef MKIMAGE_ELF32
-      if (image_target->elf_target == EM_ARM)
-	{
-	  grub_size_t tramp;
-
-	  *kernel_sz = ALIGN_UP (*kernel_sz, 16);
-
-	  tramp = arm_get_trampoline_size (e, sections, section_entsize,
-					   num_sections, image_target);
-
-	  tramp_off = *kernel_sz;
-	  *kernel_sz += ALIGN_UP (tramp, 16);
-	}
-#endif
-
-#ifdef MKIMAGE_ELF64
-      if (image_target->elf_target == EM_IA_64)
-	{
-	  grub_size_t tramp;
-
-	  *kernel_sz = ALIGN_UP (*kernel_sz, 16);
-
-	  grub_ia64_dl_get_tramp_got_size (e, &tramp, &got);
-
-	  tramp_off = *kernel_sz;
-	  *kernel_sz += ALIGN_UP (tramp, 16);
-
-	  ia64jmp_off = *kernel_sz;
-	  ia64jmpnum = SUFFIX (count_funcs) (e, symtab_section,
-					     image_target);
-	  *kernel_sz += 16 * ia64jmpnum;
-
-	  ia64_got_off = *kernel_sz;
-	  *kernel_sz += ALIGN_UP (got, 16);
-	}
-#endif
 
       if (! symtab_section)
 	grub_util_error ("%s", _("no symbol table"));
