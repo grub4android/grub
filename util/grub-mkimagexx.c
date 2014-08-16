@@ -865,8 +865,8 @@ SUFFIX (relocate_addresses) (Elf_Ehdr *e, Elf_Shdr *sections,
 		   {
 		   case R_ARM_ABS32:
 		     {
-		       grub_util_info ("  ABS32:\toffset=%d\t(0x%08x)",
-				       (int) sym_addr, (int) sym_addr);
+		       grub_util_info ("  ABS32:\ttarget=0x%08lx\toffset=(0x%08x)",
+				       (unsigned long) ((char *) target - (char *) e), sym_addr);
 		       /* Data will be naturally aligned */
 		       sym_addr += image_target->vaddr_offset;
 		       *target = grub_host_to_target32 (grub_target_to_host32 (*target) + sym_addr);
