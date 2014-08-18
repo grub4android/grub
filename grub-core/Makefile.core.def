@@ -1907,6 +1907,12 @@ module = {
 };
 
 module = {
+  name = uboot_fb;
+  common = video/uboot_fb.c;
+  enable = uboot;
+};
+
+module = {
   name = video_cirrus;
   x86 = video/cirrus.c;
   enable = x86;

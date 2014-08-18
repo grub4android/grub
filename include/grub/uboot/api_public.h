@@ -95,6 +95,8 @@ enum
   API_DISPLAY_GET_INFO,
   API_DISPLAY_DRAW_BITMAP,
   API_DISPLAY_CLEAR,
+  API_DISPLAY_FB_GET,
+  API_DISPLAY_FB_FLUSH,
   API_MAXCALL
 };
 
@@ -167,6 +169,9 @@ struct device_info
 #define DISPLAY_TYPE_LCD	0x0001
 #define DISPLAY_TYPE_VIDEO	0x0002
 
+#define DISPLAY_COLOR_FORMAT_RGB888	0x0001
+#define DISPLAY_COLOR_FORMAT_BGR888	0x0002
+
 struct display_info
 {
   int type;
@@ -176,6 +181,8 @@ struct display_info
   /* screen size in rows and columns of text */
   int screen_rows;
   int screen_cols;
+
+  int color_format;
 };
 
 #endif /* _API_PUBLIC_H_ */
