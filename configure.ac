@@ -933,6 +933,15 @@ if test "x$grub_cv_target_cc_qn" = xyes; then
   TARGET_CFLAGS="$TARGET_CFLAGS -Qn"
 fi
 
+AC_CACHE_CHECK([whether option -fdiagnostics-color=always works], grub_cv_target_cc_fdiagnostics_color, [
+  CFLAGS="$TARGET_CFLAGS -fdiagnostics-color=always -Werror"
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],
+		    [grub_cv_target_cc_fdiagnostics_color=yes],
+		    [grub_cv_target_cc_fdiagnostics_color=no])])
+if test "x$grub_cv_target_cc_fdiagnostics_color" = xyes; then
+  TARGET_CFLAGS="$TARGET_CFLAGS -fdiagnostics-color=always"
+fi
+
 #
 # Compiler features.
 #
