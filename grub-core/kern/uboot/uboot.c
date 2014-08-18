@@ -305,3 +305,28 @@ grub_uboot_env_set (const char *name, const char *value)
 {
   grub_uboot_syscall (API_ENV_SET, NULL, name, value);
 }
+
+int
+grub_uboot_display_get_info (int type, struct display_info *di)
+{
+  int retval;
+
+  if (!grub_uboot_syscall (API_DISPLAY_GET_INFO, &retval, type, di))
+    return -1;
+
+  return retval;
+}
+
+grub_addr_t
+grub_uboot_display_fb_get (void)
+{
+  grub_addr_t fb = 0;
+  grub_uboot_syscall (API_DISPLAY_FB_GET, NULL, &fb);
+  return fb;
+}
+
+void
+grub_uboot_display_fb_flush (void)
+{
+  grub_uboot_syscall (API_DISPLAY_FB_FLUSH, NULL);
+}

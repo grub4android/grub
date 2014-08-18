@@ -22,6 +22,7 @@
 
 #include <grub/types.h>
 #include <grub/dl.h>
+#include <grub/uboot/api_public.h>
 
 /* Functions.  */
 void grub_uboot_mm_init (void);
@@ -82,5 +83,10 @@ int EXPORT_FUNC (grub_uboot_dev_send) (struct device_info *dev, void *buf,
 
 char *grub_uboot_env_get (const char *name);
 void grub_uboot_env_set (const char *name, const char *value);
+
+int EXPORT_FUNC (grub_uboot_display_get_info) (int type,
+					       struct display_info * di);
+grub_addr_t EXPORT_FUNC (grub_uboot_display_fb_get) (void);
+void EXPORT_FUNC (grub_uboot_display_fb_flush) (void);
 
 #endif /* ! GRUB_UBOOT_UBOOT_HEADER */
