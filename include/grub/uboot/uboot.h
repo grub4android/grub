@@ -89,4 +89,6 @@ int EXPORT_FUNC (grub_uboot_display_get_info) (int type,
 grub_addr_t EXPORT_FUNC (grub_uboot_display_fb_get) (void);
 void EXPORT_FUNC (grub_uboot_display_fb_flush) (void);
 
+int EXPORT_FUNC (grub_uboot_input_getkey) (void);
+
 #endif /* ! GRUB_UBOOT_UBOOT_HEADER */
