@@ -346,3 +346,13 @@ void
 grub_uboot_display_fb_flush(void) {
 	grub_uboot_syscall (API_DISPLAY_FB_FLUSH, NULL);
 }
+
+int
+grub_uboot_input_getkey(void) {
+  int code;
+
+  if (!grub_uboot_syscall (API_INPUT_GETKEY, &code))
+    return 0;
+
+  return code;
+}

@@ -1845,6 +1845,12 @@ module = {
 };
 
 module = {
+  name = uboot_keyboard;
+  common = term/uboot/keyboard.c;
+  enable = uboot;
+};
+
+module = {
   name = gfxterm;
   common = term/gfxterm.c;
   enable = videomodules;
