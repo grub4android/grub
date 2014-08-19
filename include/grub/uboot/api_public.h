@@ -98,6 +98,8 @@ enum
   API_DISPLAY_FB_GET,
   API_DISPLAY_FB_FLUSH,
   API_INPUT_GETKEY,
+  API_BOOT_GET_LDR_ADDR,
+  API_BOOT_FILE,
   API_MAXCALL
 };
 
@@ -184,6 +186,11 @@ struct display_info
   int screen_cols;
 
   int color_format;
+};
+
+struct boot_request {
+  void *data;
+  int size;
 };
 
 #endif /* _API_PUBLIC_H_ */

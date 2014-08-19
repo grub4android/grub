@@ -356,3 +356,23 @@ grub_uboot_input_getkey(void) {
 
   return code;
 }
+
+void* grub_uboot_boot_get_ldr_addr(void) {
+  void* addr;
+
+  if (!grub_uboot_syscall (API_BOOT_GET_LDR_ADDR, (void*)&addr))
+    return 0;
+
+  return addr;
+}
+
+int
+grub_uboot_boot_file (struct boot_request *bi)
+{
+  int retval;
+
+  if (!grub_uboot_syscall (API_BOOT_FILE, &retval, bi))
+    return 0;
+
+  return retval;
+}

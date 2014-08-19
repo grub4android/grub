@@ -90,4 +90,7 @@ void EXPORT_FUNC(grub_uboot_display_fb_flush)(void);
 
 int EXPORT_FUNC(grub_uboot_input_getkey)(void);
 
+void* EXPORT_FUNC(grub_uboot_boot_get_ldr_addr)(void);
+int EXPORT_FUNC(grub_uboot_boot_file)(struct boot_request *bi);
+
 #endif /* ! GRUB_UBOOT_UBOOT_HEADER */
