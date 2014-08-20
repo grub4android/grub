@@ -37,25 +37,58 @@ struct boot_request request;
 static grub_err_t
 ubootldr_boot (void)
 {
-  grub_uboot_boot_file(&request);
+  grub_uboot_boot_file (&request);
   return grub_error (GRUB_ERR_BAD_OS, "UBOOT boot request failed");
 }
 
 static grub_err_t
-ubootldr_load (const char *filename, grub_file_t file)
+ubootldr_load_file (const char *filename)
 {
+  grub_file_t file;
+
+  // open file
+  file = grub_file_open (filename);
+  if (!file)
+    return grub_error (GRUB_ERR_IO, "Couldn't open file %s", filename);
+
   // setup request
   request.size = grub_file_size (file);
-  request.data = grub_uboot_boot_get_ldr_addr();
-  if(!request.data )
-    return grub_error (GRUB_ERR_IO, "Couldn't get addr from uboot");
+  request.data = grub_malloc (request.size);
+  if (!request.data)
+    return grub_error (GRUB_ERR_IO, "Couldn't allocate kernel memory");
 
   // read file into RAM
   if (grub_file_read (file, request.data, request.size) != request.size)
     {
       if (!grub_errno)
-        grub_error (GRUB_ERR_BAD_OS, N_("premature end of file %s"),
+	grub_error (GRUB_ERR_BAD_OS, N_("premature end of file %s"),
 		    filename);
+      return grub_errno;
+    }
+
+  grub_file_close (file);
+  return GRUB_ERR_NONE;
+}
+
+static grub_err_t
+ubootldr_load_disk (grub_disk_t disk)
+{
+  // setup request
+  request.size = grub_disk_get_size (disk) * GRUB_DISK_SECTOR_SIZE;
+  request.data = grub_malloc (request.size);
+  if (!request.data)
+    {
+      if (!grub_errno)
+	grub_error (GRUB_ERR_IO, "Couldn't allocate kernel memory");
+      return grub_errno;
+    }
+
+  // read file into RAM
+  if (grub_disk_read (disk, 0, 0, request.size, request.data))
+    {
+      if (!grub_errno)
+	grub_error (GRUB_ERR_BAD_OS, N_("premature end of file"));
+
       return grub_errno;
     }
 
@@ -72,25 +105,34 @@ ubootldr_unload (void)
 
 static grub_err_t
 grub_cmd_ubootldr (grub_command_t cmd __attribute__ ((unused)),
-		int argc, char *argv[])
+		   int argc, char *argv[])
 {
-  grub_err_t err;
-  grub_file_t file;
   grub_dl_ref (my_mod);
+  int namelen;
+  grub_disk_t disk;
+
+  namelen = grub_strlen (argv[0]);
 
   if (argc == 0)
     return grub_error (GRUB_ERR_BAD_ARGUMENT, N_("filename expected"));
 
-  // open file
-  file = grub_file_open (argv[0]);
-  if (!file)
-    goto fail;
+  if ((argv[0][0] == '(') && (argv[0][namelen - 1] == ')'))
+    {
+      argv[0][namelen - 1] = 0;
+      disk = grub_disk_open (&argv[0][1]);
+      if (!disk)
+	return 0;
 
-  // load file
-  err = ubootldr_load (argv[0], file);
-  grub_file_close (file);
-  if (err)
-    goto fail;
+      // load disk
+      if (ubootldr_load_disk (disk))
+	goto fail;
+    }
+  else
+    {
+      // load file
+      if (ubootldr_load_file (argv[0]))
+	goto fail;
+    }
 
   // set loader
   grub_loader_set (ubootldr_boot, ubootldr_unload, 0);
@@ -107,7 +149,7 @@ static grub_command_t cmd_ubootldr;
 GRUB_MOD_INIT (ubootldr)
 {
   cmd_ubootldr = grub_register_command ("ubootldr", grub_cmd_ubootldr,
-				     0, N_("Boot Image via UBOOT API."));
+					0, N_("Boot Image via UBOOT API."));
   my_mod = mod;
 }
 
