@@ -48,10 +48,17 @@ grub_uboot_mm_init (void)
       int i;
       start_of_ram = GRUB_UINT_MAX;
 
+      // first, search for the start address
       for (i = 0; i < si->mr_no; i++)
 	if ((si->mr[i].flags & MR_ATTR_MASK) == MR_ATTR_DRAM)
 	  if (si->mr[i].start < start_of_ram)
 	    start_of_ram = si->mr[i].start;
+
+      // then init memory regions for the others
+      for (i = 0; i < si->mr_no; i++)
+	if ((si->mr[i].flags & MR_ATTR_MASK) == MR_ATTR_DRAM)
+	  if (si->mr[i].start != start_of_ram)
+	    grub_mm_init_region ((void *) si->mr[i].start, si->mr[i].size);
     }
 }
 
