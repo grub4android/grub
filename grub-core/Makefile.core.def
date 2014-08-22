@@ -1717,8 +1717,8 @@ module = {
 };
 
 module = {
-  name = ubootldr;
-  common = loader/ubootldr.c;
+  name = android;
+  common = loader/android.c;
   enable = uboot;
 };
 

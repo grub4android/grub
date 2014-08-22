@@ -90,6 +90,7 @@ void EXPORT_FUNC(grub_uboot_display_fb_flush)(void);
 
 int EXPORT_FUNC(grub_uboot_input_getkey)(void);
 
-int EXPORT_FUNC(grub_uboot_boot_file)(struct boot_request *bi);
+int EXPORT_FUNC(grub_uboot_boot_create_tags)(struct tags_info *info);
+int EXPORT_FUNC(grub_uboot_boot_prepare)(void);
 
 #endif /* ! GRUB_UBOOT_UBOOT_HEADER */

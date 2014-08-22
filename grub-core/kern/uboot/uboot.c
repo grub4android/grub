@@ -358,11 +358,22 @@ grub_uboot_input_getkey(void) {
 }
 
 int
-grub_uboot_boot_file (struct boot_request *bi)
+grub_uboot_boot_create_tags (struct tags_info *info)
 {
   int retval;
 
-  if (!grub_uboot_syscall (API_BOOT_FILE, &retval, bi))
+  if (!grub_uboot_syscall (API_BOOT_CREATE_TAGS, &retval, info))
+    return 0;
+
+  return retval;
+}
+
+int
+grub_uboot_boot_prepare (void)
+{
+  int retval;
+
+  if (!grub_uboot_syscall (API_BOOT_PREPARE, &retval))
     return 0;
 
   return retval;

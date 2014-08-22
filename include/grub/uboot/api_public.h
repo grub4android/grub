@@ -98,7 +98,8 @@ enum
   API_DISPLAY_FB_GET,
   API_DISPLAY_FB_FLUSH,
   API_INPUT_GETKEY,
-  API_BOOT_FILE,
+  API_BOOT_CREATE_TAGS,
+  API_BOOT_PREPARE,
   API_MAXCALL
 };
 
@@ -187,9 +188,13 @@ struct display_info
   int color_format;
 };
 
-struct boot_request {
-  void *data;
-  int size;
+struct tags_info {
+  void *tags_addr;
+  const char *cmdline;
+  void *ramdisk;
+  unsigned ramdisk_size;
+  void* dt;
+  unsigned dt_size;
 };
 
 #endif /* _API_PUBLIC_H_ */
