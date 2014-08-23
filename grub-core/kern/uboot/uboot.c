@@ -172,6 +172,8 @@ grub_uboot_dev_enum (void)
   if (!enum_devices)
     return 0;
 
+  grub_memset(enum_devices, 0, sizeof(struct device_info) * max_devices);
+
   /*
    * The API_DEV_ENUM call starts a fresh enumeration when passed a
    * struct device_info with a NULL cookie, and then depends on having
