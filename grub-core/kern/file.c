@@ -134,6 +134,61 @@ grub_file_open (const char *name)
   return 0;
 }
 
+static grub_ssize_t
+grub_memfile_read (grub_file_t file, char *buf, grub_size_t len)
+{
+  char *src_addr = file->data;
+
+  grub_memcpy (buf, src_addr + file->offset, len);
+
+  return len;
+}
+
+static struct grub_fs grub_memfile_fs = {
+  .name = "grub_memfile",
+  .dir = 0,
+  .open = 0,
+  .read = grub_memfile_read,
+  .close = 0,
+  .label = 0,
+  .next = 0
+};
+
+grub_file_t
+grub_memfile_open (void *addr, grub_size_t size)
+{
+  grub_file_t file = 0, last_file = 0;
+  grub_file_filter_id_t filter;
+
+  // allocate file struct
+  file = (grub_file_t) grub_zalloc (sizeof (*file));
+  if (!file)
+    return 0;
+
+  // init file struct
+  file->device = 0;
+  file->data = addr;
+  file->fs = &grub_memfile_fs;
+  file->size = size;
+
+  // apply IO filters
+  for (filter = 0; file && filter < ARRAY_SIZE (grub_file_filters_enabled);
+       filter++)
+    if (grub_file_filters_enabled[filter])
+      {
+	last_file = file;
+	file = grub_file_filters_enabled[filter] (file, "");
+      }
+  if (!file)
+    grub_file_close (last_file);
+
+  grub_memcpy (grub_file_filters_enabled, grub_file_filters_all,
+	       sizeof (grub_file_filters_enabled));
+
+  // return file
+  return file;
+}
+
 grub_disk_read_hook_t grub_file_progress_hook;
 
 grub_ssize_t
