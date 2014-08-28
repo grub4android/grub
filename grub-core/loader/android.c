@@ -40,6 +40,10 @@ static struct boot_info
   boot_img_hdr *hdr;
 } bootinfo;
 
+/*
+ * SOURCE ABSTRACTION
+ */
+
 struct source;
 typedef grub_err_t (source_read) (struct source * src, grub_off_t offset,
 				  grub_size_t len, void *buf);
@@ -100,6 +104,58 @@ file_free (struct source *src)
   return GRUB_ERR_NONE;
 }
 
+/*
+ * RAMDISK PATCHING
+ */
+
+static grub_size_t
+ramdisk_get_uncompressed_size (void *addr, grub_size_t sz)
+{
+  unsigned *ptr = (unsigned *) (void *) ((((char *) addr) + sz) - 4);
+  return (grub_size_t) * ptr;
+}
+
+static grub_err_t
+android_patch_ramdisk (boot_img_hdr * hdr)
+{
+  char *cpiobuf = NULL;
+  grub_size_t cpiosize =
+    ramdisk_get_uncompressed_size ((void *) hdr->ramdisk_addr,
+				   hdr->ramdisk_size);
+
+  // create buffer
+  cpiobuf = grub_malloc (cpiosize);
+  if (!cpiobuf)
+    goto err_out;
+
+  // read file into buffer
+  unsigned int real_size = (unsigned int) hdr->ramdisk_size;
+  if (grub_uboot_tool_gunzip
+      (cpiobuf, cpiosize, (void *) hdr->ramdisk_addr, &real_size)
+      || real_size != cpiosize)
+    {
+      grub_error (GRUB_ERR_BAD_OS, N_("premature end of ramdisk file"));
+      goto err_free_buffer;
+    }
+
+  // copy back
+  grub_memcpy ((void *) hdr->ramdisk_addr, cpiobuf, cpiosize);
+  hdr->ramdisk_size = cpiosize;
+
+  // cleanup
+  grub_free (cpiobuf);
+
+  return GRUB_ERR_NONE;
+
+err_free_buffer:
+  grub_free (cpiobuf);
+err_out:
+  return grub_errno;
+}
+
+/*
+ * ANDROID STUFF
+ */
 static grub_err_t
 android_boot (void)
 {
@@ -115,7 +171,10 @@ android_boot (void)
 
   grub_arm_disable_caches_mmu ();
   grub_uboot_boot_prepare ();
-  grub_printf ("Booting kernel @ %p\n", linuxmain);
+  grub_printf
+    ("Booting kernel @ %p, ramdisk @ 0x%08x (%d), tags/device tree @ 0x%08x\n",
+     linuxmain, bootinfo.hdr->ramdisk_addr, bootinfo.hdr->ramdisk_size,
+     bootinfo.hdr->tags_addr);
   linuxmain (0, grub_uboot_get_machine_type (),
 	     (void *) bootinfo.hdr->tags_addr);
 
@@ -129,7 +188,7 @@ android_load (struct source *src __attribute__ ((unused)))
   struct tags_info info;
 
   // init
-  memset(&info, 0, sizeof(info));
+  memset (&info, 0, sizeof (info));
 
   // read header
   hdr = (boot_img_hdr *) grub_malloc (sizeof (boot_img_hdr) + 100);
@@ -172,7 +231,7 @@ android_load (struct source *src __attribute__ ((unused)))
   // set bootinfo
   bootinfo.hdr = hdr;
 
-  // load tags
+  // load devicetree
   offset += second_size;
   if (dt_size > 0)
     {
@@ -182,13 +241,20 @@ android_load (struct source *src __attribute__ ((unused)))
 	goto err_remove_bootinfo;
     }
 
+  // patch ramdisk
+  if (android_patch_ramdisk (hdr))
+    goto err_free_dt;
+
   // create tags
   info.tags_addr = (void *) hdr->tags_addr;
   info.cmdline = (const char *) hdr->cmdline;
   info.ramdisk = (void *) hdr->ramdisk_addr;
   info.ramdisk_size = hdr->ramdisk_size;
   if (grub_uboot_boot_create_tags (&info))
-    goto err_free_dt;
+    {
+      grub_error (GRUB_ERR_BUG, N_("Could not create tags."));
+      goto err_free_dt;
+    }
 
 
   if (info.dt)
@@ -204,7 +270,7 @@ err_free_hdr:
   grub_free (hdr);
 err_out:
   if (!grub_errno)
-    grub_error (GRUB_ERR_BUG, N_("Unknown error."));
+    grub_error (GRUB_ERR_BUG, N_("%s: Unknown error."), __func__);
   return grub_errno;
 }
 
@@ -270,7 +336,7 @@ source_free:
 dl_unref:
   grub_dl_unref (my_mod);
   if (!grub_errno)
-    grub_error (GRUB_ERR_BUG, N_("Unknown error."));
+    grub_error (GRUB_ERR_BUG, N_("%s: Unknown error."), __func__);
   return grub_errno;
 }
 
