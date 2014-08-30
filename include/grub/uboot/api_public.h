@@ -100,7 +100,6 @@ enum
   API_INPUT_GETKEY,
   API_BOOT_CREATE_TAGS,
   API_BOOT_PREPARE,
-  API_TOOL_GUNZIP,
   API_MAXCALL
 };
 
@@ -189,13 +188,12 @@ struct display_info
   int color_format;
 };
 
-struct tags_info
-{
+struct tags_info {
   void *tags_addr;
   const char *cmdline;
   void *ramdisk;
   unsigned ramdisk_size;
-  void *dt;
+  void* dt;
   unsigned dt_size;
 };
 

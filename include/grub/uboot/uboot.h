@@ -57,8 +57,8 @@ int grub_uboot_api_init (void);
  * implemented in grub-core/kern/uboot/uboot.c
 */
 
-int grub_uboot_getc (void);
-int grub_uboot_tstc (void);
+int  grub_uboot_getc (void);
+int  grub_uboot_tstc (void);
 void grub_uboot_putc (int c);
 void grub_uboot_puts (const char *s);
 
@@ -70,33 +70,27 @@ void grub_uboot_udelay (grub_uint32_t usec);
 grub_uint32_t grub_uboot_get_timer (grub_uint32_t base);
 
 int EXPORT_FUNC (grub_uboot_dev_enum) (void);
-struct device_info *EXPORT_FUNC (grub_uboot_dev_get) (int index);
-int EXPORT_FUNC (grub_uboot_dev_open) (struct device_info * dev);
-int EXPORT_FUNC (grub_uboot_dev_close) (struct device_info * dev);
+struct device_info * EXPORT_FUNC (grub_uboot_dev_get) (int index);
+int EXPORT_FUNC (grub_uboot_dev_open) (struct device_info *dev);
+int EXPORT_FUNC (grub_uboot_dev_close) (struct device_info *dev);
 int grub_uboot_dev_write (struct device_info *dev, void *buf, int *len);
-int grub_uboot_dev_read (struct device_info *dev, void *buf,
-			 grub_size_t blocks, grub_uint32_t start,
-			 grub_size_t * real_blocks);
-int EXPORT_FUNC (grub_uboot_dev_recv) (struct device_info * dev, void *buf,
+int grub_uboot_dev_read (struct device_info *dev, void *buf, grub_size_t blocks,
+			 grub_uint32_t start, grub_size_t * real_blocks);
+int EXPORT_FUNC (grub_uboot_dev_recv) (struct device_info *dev, void *buf,
 				       int size, int *real_size);
-int EXPORT_FUNC (grub_uboot_dev_send) (struct device_info * dev, void *buf,
+int EXPORT_FUNC (grub_uboot_dev_send) (struct device_info *dev, void *buf,
 				       int size);
 
 char *grub_uboot_env_get (const char *name);
 void grub_uboot_env_set (const char *name, const char *value);
 
-int EXPORT_FUNC (grub_uboot_display_get_info) (int type,
-					       struct display_info * di);
-grub_addr_t EXPORT_FUNC (grub_uboot_display_fb_get) (void);
-void EXPORT_FUNC (grub_uboot_display_fb_flush) (void);
+int EXPORT_FUNC(grub_uboot_display_get_info)(int type, struct display_info *di);
+grub_addr_t EXPORT_FUNC(grub_uboot_display_fb_get)(void);
+void EXPORT_FUNC(grub_uboot_display_fb_flush)(void);
 
-int EXPORT_FUNC (grub_uboot_input_getkey) (void);
+int EXPORT_FUNC(grub_uboot_input_getkey)(void);
 
-int EXPORT_FUNC (grub_uboot_boot_create_tags) (struct tags_info * info);
-int EXPORT_FUNC (grub_uboot_boot_prepare) (void);
-
-int EXPORT_FUNC (grub_uboot_tool_gunzip) (void *dst, unsigned int dstlen,
-					  unsigned char *src,
-					  unsigned int *lenp);
+int EXPORT_FUNC(grub_uboot_boot_create_tags)(struct tags_info *info);
+int EXPORT_FUNC(grub_uboot_boot_prepare)(void);
 
 #endif /* ! GRUB_UBOOT_UBOOT_HEADER */
