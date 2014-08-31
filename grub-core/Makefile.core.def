@@ -2231,6 +2231,11 @@ module = {
 };
 
 module = {
+  name = cpio;
+  common = lib/cpio.c;
+};
+
+module = {
   name = mpi;
   common = lib/libgcrypt-grub/mpi/mpiutil.c;
   common = lib/libgcrypt-grub/mpi/mpi-bit.c;
