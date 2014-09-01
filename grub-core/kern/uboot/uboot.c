@@ -45,7 +45,7 @@ extern grub_addr_t grub_uboot_search_hint;
 
 static struct sys_info uboot_sys_info;
 static struct mem_region uboot_mem_info[5];
-static struct device_info * devices;
+static struct device_info *devices;
 static int num_devices;
 
 int
@@ -161,18 +161,18 @@ grub_uboot_get_timer (grub_uint32_t base)
 int
 grub_uboot_dev_enum (void)
 {
-  struct device_info * enum_devices;
+  struct device_info *enum_devices;
   int num_enum_devices, max_devices;
 
   if (num_devices)
     return num_devices;
 
   max_devices = 2;
-  enum_devices = grub_malloc (sizeof(struct device_info) * max_devices);
+  enum_devices = grub_malloc (sizeof (struct device_info) * max_devices);
   if (!enum_devices)
     return 0;
 
-  grub_memset(enum_devices, 0, sizeof(struct device_info) * max_devices);
+  grub_memset (enum_devices, 0, sizeof (struct device_info) * max_devices);
 
   /*
    * The API_DEV_ENUM call starts a fresh enumeration when passed a
@@ -223,7 +223,7 @@ grub_uboot_dev_enum (void)
   devices = enum_devices;
   return num_devices = num_enum_devices;
 
- error:
+error:
   grub_free (enum_devices);
   return 0;
 }
@@ -328,35 +328,45 @@ grub_uboot_env_set (const char *name, const char *value)
 }
 
 int
-grub_uboot_display_get_info(int type, struct display_info *di) {
-	int retval;
+grub_uboot_display_get_info (int type, struct display_info *di)
+{
+  int retval;
 
-	if (!grub_uboot_syscall (API_DISPLAY_GET_INFO, &retval, type, di))
-		return -1;
+  if (!grub_uboot_syscall (API_DISPLAY_GET_INFO, &retval, type, di))
+    return -1;
 
-	return retval;
+  return retval;
 }
 
 grub_addr_t
-grub_uboot_display_fb_get(void) {
-	grub_addr_t fb = 0;
-	grub_uboot_syscall (API_DISPLAY_FB_GET, NULL, &fb);
-	return fb;
+grub_uboot_display_fb_get (void)
+{
+  grub_addr_t fb = 0;
+  grub_uboot_syscall (API_DISPLAY_FB_GET, NULL, &fb);
+  return fb;
 }
 
 void
-grub_uboot_display_fb_flush(void) {
-	grub_uboot_syscall (API_DISPLAY_FB_FLUSH, NULL);
+grub_uboot_display_fb_flush (void)
+{
+  grub_uboot_syscall (API_DISPLAY_FB_FLUSH, NULL);
 }
 
 int
-grub_uboot_input_getkey(void) {
+grub_uboot_input_getkey (void)
+{
   int code;
 
   if (!grub_uboot_syscall (API_INPUT_GETKEY, &code))
     return 0;
 
   return code;
+}
+
+void
+grub_uboot_boot_update_addresses (struct boot_img_hdr *hdr, int is_arm64)
+{
+  grub_uboot_syscall (API_BOOT_UPDATE_ADDRESSES, NULL, hdr, is_arm64);
 }
 
 int
