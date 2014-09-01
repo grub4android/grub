@@ -92,4 +92,21 @@ struct boot_img_hdr
 ** 6. if second_size != 0: jump to second_addr
 **    else: jump to kernel_addr
 */
+
+#define KERNEL64_HDR_MAGIC 0x644D5241 /* ARM64 */
+#define IS_ARM64(ptr) (((struct kernel64_hdr*)(ptr))->magic_64 == KERNEL64_HDR_MAGIC)
+
+struct kernel64_hdr
+{
+    grub_uint32_t insn;
+    grub_uint32_t res1;
+    grub_uint64_t text_offset;
+    grub_uint64_t res2;
+    grub_uint64_t res3;
+    grub_uint64_t res4;
+    grub_uint64_t res5;
+    grub_uint64_t res6;
+    grub_uint32_t magic_64;
+    grub_uint32_t res7;
+};
 #endif

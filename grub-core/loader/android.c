@@ -210,6 +210,10 @@ android_load (struct source *src __attribute__ ((unused)))
   grub_size_t second_size = ALIGN (hdr->second_size, hdr->page_size);
   grub_size_t dt_size = ALIGN (hdr->dt_size, hdr->page_size);
 
+  // update addresses
+  int is_arm64 = IS_ARM64(hdr->kernel_addr + hdr->page_size);
+  grub_uboot_boot_update_addresses(hdr, is_arm64);
+
   // load kernel
   grub_off_t offset = hdr->page_size;
   if (src->read (src, offset, kernel_size, (void *) hdr->kernel_addr))
@@ -250,6 +254,7 @@ android_load (struct source *src __attribute__ ((unused)))
   info.cmdline = (const char *) hdr->cmdline;
   info.ramdisk = (void *) hdr->ramdisk_addr;
   info.ramdisk_size = hdr->ramdisk_size;
+  info.page_size = hdr->page_size;
   if (grub_uboot_boot_create_tags (&info))
     {
       grub_error (GRUB_ERR_BUG, N_("Could not create tags."));
