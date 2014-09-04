@@ -27,10 +27,13 @@
 #include <grub/cpu/linux.h>
 #include <grub/linux.h>
 #include <grub/android.h>
+#include <grub/lib/cpio.h>
 
 GRUB_MOD_LICENSE ("GPLv3+");
 
 #define ALIGN(x,ps) (((x) + (ps)-1) & (~((ps)-1)))
+#define CPIO_MAX_FILES 2048
+#define MAX_RAMDISK_SIZE 20*1024*1024
 typedef void (*kernel_entry_t) (int, unsigned long, void *);
 
 static grub_dl_t my_mod;
@@ -108,47 +111,76 @@ file_free (struct source *src)
  * RAMDISK PATCHING
  */
 
-static grub_size_t
-ramdisk_get_uncompressed_size (void *addr, grub_size_t sz)
-{
-  unsigned *ptr = (unsigned *) (void *) ((((char *) addr) + sz) - 4);
-  return (grub_size_t) * ptr;
-}
-
 static grub_err_t
 android_patch_ramdisk (boot_img_hdr * hdr)
 {
   char *cpiobuf = NULL;
-  grub_size_t cpiosize =
-    ramdisk_get_uncompressed_size ((void *) hdr->ramdisk_addr,
-				   hdr->ramdisk_size);
+  unsigned long i;
+  grub_size_t cpiosize = 0;
+  grub_file_t cpiofile = 0;
+
+  // open file
+  cpiofile = grub_memfile_open ((void *) hdr->ramdisk_addr, hdr->ramdisk_size);
+  if (!cpiofile)
+    goto err_out;
+  cpiosize = grub_file_size (cpiofile);
 
   // create buffer
   cpiobuf = grub_malloc (cpiosize);
   if (!cpiobuf)
-    goto err_out;
+    goto err_close_cpiofile;
 
   // read file into buffer
-  unsigned int real_size = (unsigned int) hdr->ramdisk_size;
-  if (grub_uboot_tool_gunzip
-      (cpiobuf, cpiosize, (void *) hdr->ramdisk_addr, &real_size)
-      || real_size != cpiosize)
+  if (grub_file_read (cpiofile, cpiobuf, cpiosize) != (grub_ssize_t) cpiosize)
     {
-      grub_error (GRUB_ERR_BAD_OS, N_("premature end of ramdisk file"));
+      if (!grub_errno)
+	grub_error (GRUB_ERR_BAD_OS, N_("premature end of ramdisk file"));
       goto err_free_buffer;
     }
 
-  // copy back
-  grub_memcpy ((void *) hdr->ramdisk_addr, cpiobuf, cpiosize);
-  hdr->ramdisk_size = cpiosize;
+  // parse CPIO
+  unsigned long num = cpiosize;
+  CPIO_OBJ cobjs[CPIO_MAX_FILES];
+  if (cpio_load (cpiobuf, cobjs, &num))
+    goto err_free_buffer;
+
+  // EXAMPLE: patching
+  for (i = 0; i < num; i++)
+    {
+      if (!grub_strncmp (cobjs[i].name, "init", cobjs[i].namesize))
+	{
+      // make a copy
+      grub_printf("found /init!\n");
+	  unsigned long x = num++;
+	  cobjs[x] = cobjs[i];
+
+      // name
+	  cobjs[x].name = grub_strdup ("sbin/grubinit");
+	  cobjs[x].namesize = grub_strlen(cobjs[x].name)+1;
+
+      // data
+	  cobjs[x].data = grub_strdup ("#!/sbin/sh\n/init\n");
+	  cobjs[x].filesize = grub_strlen (cobjs[x].data);
+
+	}
+    }
+
+  // create new ramdisk
+  unsigned int size = MAX_RAMDISK_SIZE;
+  if (cpio_write (cobjs, num, (void *) hdr->ramdisk_addr, &size))
+    goto err_free_buffer;
+  hdr->ramdisk_size = size;
 
   // cleanup
   grub_free (cpiobuf);
+  grub_file_close (cpiofile);
 
   return GRUB_ERR_NONE;
 
 err_free_buffer:
   grub_free (cpiobuf);
+err_close_cpiofile:
+  grub_file_close (cpiofile);
 err_out:
   return grub_errno;
 }
@@ -249,9 +281,20 @@ android_load (struct source *src __attribute__ ((unused)))
   if (android_patch_ramdisk (hdr))
     goto err_free_dt;
 
+  // use grubinit as init binary
+  hdr->cmdline[BOOT_ARGS_SIZE - 1] = '\0';
+  const char *root = " rdinit=/sbin/grubinit";
+  char *cmdline =
+    grub_malloc (grub_strlen ((char *) hdr->cmdline) + grub_strlen (root) +
+		 1);
+
+  memcpy (cmdline, hdr->cmdline, grub_strlen ((char *) hdr->cmdline));
+  memcpy (cmdline + grub_strlen ((char *) hdr->cmdline), root,
+	  grub_strlen (root)+1);
+
   // create tags
   info.tags_addr = (void *) hdr->tags_addr;
-  info.cmdline = (const char *) hdr->cmdline;
+  info.cmdline = (const char *) cmdline;
   info.ramdisk = (void *) hdr->ramdisk_addr;
   info.ramdisk_size = hdr->ramdisk_size;
   info.page_size = hdr->page_size;
