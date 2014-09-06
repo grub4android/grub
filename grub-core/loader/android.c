@@ -28,15 +28,18 @@
 #include <grub/linux.h>
 #include <grub/android.h>
 #include <grub/lib/cpio.h>
+#include <grub/lib/cmdline.h>
 
 GRUB_MOD_LICENSE ("GPLv3+");
 
 #define ALIGN(x,ps) (((x) + (ps)-1) & (~((ps)-1)))
 #define CPIO_MAX_FILES 2048
 #define MAX_RAMDISK_SIZE 20*1024*1024
+#define INITRD " rdinit=/multiboot/init "
 typedef void (*kernel_entry_t) (int, unsigned long, void *);
 
 static grub_dl_t my_mod;
+static char *linux_args;
 
 static struct boot_info
 {
@@ -342,10 +345,12 @@ android_boot (void)
 }
 
 static grub_err_t
-android_load (struct source *src __attribute__ ((unused)))
+android_load (struct source *src
+	      __attribute__ ((unused)), int argc, char *argv[])
 {
   boot_img_hdr *hdr;
   struct tags_info info;
+  int size_linux_args, size_bootimg_cmdline;
 
   // init
   memset (&info, 0, sizeof (info));
@@ -409,20 +414,24 @@ android_load (struct source *src __attribute__ ((unused)))
   if (android_patch_ramdisk (hdr))
     goto err_free_dt;
 
-  // use grubinit as init binary
-  hdr->cmdline[BOOT_ARGS_SIZE - 1] = '\0';
-  const char *root = " rdinit=/multiboot/init";
-  char *cmdline =
-    grub_malloc (grub_strlen ((char *) hdr->cmdline) + grub_strlen (root) +
-		 1);
+  // allocate memory for cmdline
+  size_linux_args = grub_loader_cmdline_size (argc, argv);
+  size_bootimg_cmdline = grub_strlen ((const char *) hdr->cmdline);
+  linux_args =
+    grub_malloc (size_bootimg_cmdline + sizeof (INITRD) + size_linux_args);
+  if (!linux_args)
+    goto err_free_dt;
 
-  memcpy (cmdline, hdr->cmdline, grub_strlen ((char *) hdr->cmdline));
-  memcpy (cmdline + grub_strlen ((char *) hdr->cmdline), root,
-	  grub_strlen (root) + 1);
+  // create cmdline
+  grub_memcpy (linux_args, hdr->cmdline, size_bootimg_cmdline);
+  grub_memcpy (linux_args + size_bootimg_cmdline, INITRD, sizeof (INITRD));
+  grub_create_loader_cmdline (argc, argv,
+			      linux_args + size_bootimg_cmdline +
+			      sizeof (INITRD) - 1, size_linux_args);
 
   // create tags
   info.tags_addr = (void *) hdr->tags_addr;
-  info.cmdline = (const char *) cmdline;
+  info.cmdline = (const char *) linux_args;
   info.ramdisk = (void *) hdr->ramdisk_addr;
   info.ramdisk_size = hdr->ramdisk_size;
   info.page_size = hdr->page_size;
@@ -496,7 +505,9 @@ grub_cmd_android (grub_command_t cmd __attribute__ ((unused)),
     }
 
   // load android image
-  if (android_load (&src))
+  argc--;
+  argv++;
+  if (android_load (&src, argc, argv))
     goto source_free;
 
   // close source
