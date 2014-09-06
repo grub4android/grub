@@ -111,16 +111,128 @@ file_free (struct source *src)
  * RAMDISK PATCHING
  */
 
+struct multiboot_file
+{
+  void *data;
+  char *name;
+  grub_size_t size;
+};
+
+struct multiboot_filelist
+{
+  int num_files;
+  struct multiboot_file *files;
+  const char *prefix;
+};
+
+static int
+android_multiboot_iterate_dir (const char *filename,
+			       const struct grub_dirhook_info *info
+			       __attribute__ ((unused)), void *data)
+{
+  struct multiboot_filelist *mblist = (struct multiboot_filelist *) data;
+  if (info->dir)
+    goto out;
+  char *fullname;
+  int namesize = grub_strlen (mblist->prefix) + grub_strlen (filename) + 1;
+  grub_file_t file;
+
+  // get full filename
+  fullname = grub_malloc (namesize);
+  grub_snprintf (fullname, namesize, "%s%s", mblist->prefix, filename);
+
+  // open file
+  file = grub_file_open (fullname);
+  if (!file)
+    {
+      grub_printf ("Couldn't open %s\n", fullname);
+      goto err_free_fullname;
+
+    }
+
+  // resize list
+  mblist->files =
+    grub_realloc (mblist->files,
+		  ++mblist->num_files * sizeof (struct multiboot_file));
+  struct multiboot_file *mbfile = &mblist->files[mblist->num_files - 1];
+  mbfile->name = grub_strdup (filename);
+  mbfile->size = grub_file_size (file);
+  mbfile->data = grub_malloc (mbfile->size);
+  if (!mbfile->data)
+    {
+      grub_printf ("Couldn't malloc %u bytes for %s\n", mbfile->size,
+		   fullname);
+      goto err_close_file;
+    }
+
+  // read file into buffer
+  if (grub_file_read (file, mbfile->data, mbfile->size) !=
+      (grub_ssize_t) mbfile->size)
+    {
+      if (!grub_errno)
+	grub_error (GRUB_ERR_BAD_OS, N_("premature end of file %s"),
+		    fullname);
+      goto err_free_fullname;
+    }
+
+out:
+  return 0;
+
+err_close_file:
+  grub_file_close (file);
+err_free_fullname:
+  grub_free (fullname);
+
+  return grub_errno;
+}
+
+static grub_err_t
+android_add_multiboot_files (struct multiboot_filelist *mblist)
+{
+  grub_fs_t fs;
+  grub_device_t dev;
+
+  // open root device
+  dev = grub_device_open (NULL);
+  if (!dev)
+    {
+      goto fail;
+    }
+
+  // get filesystem
+  fs = grub_fs_probe (dev);
+  if (!fs)
+    {
+      goto fail;
+    }
+
+  // add all files
+  mblist->num_files = 0;
+  mblist->files = NULL;
+  mblist->prefix = "/boot/grub/multiboot/";
+  if (fs->dir (dev, mblist->prefix, android_multiboot_iterate_dir, mblist))
+    goto fail;
+
+  return GRUB_ERR_NONE;
+
+fail:
+  return grub_errno;
+}
+
 static grub_err_t
 android_patch_ramdisk (boot_img_hdr * hdr)
 {
+  static const char *mbdir = "multiboot";
   char *cpiobuf = NULL;
-  unsigned long i;
+  int i;
+  unsigned long x;
   grub_size_t cpiosize = 0;
   grub_file_t cpiofile = 0;
+  struct multiboot_filelist mblist;
 
   // open file
-  cpiofile = grub_memfile_open ((void *) hdr->ramdisk_addr, hdr->ramdisk_size);
+  cpiofile =
+    grub_memfile_open ((void *) hdr->ramdisk_addr, hdr->ramdisk_size);
   if (!cpiofile)
     goto err_out;
   cpiosize = grub_file_size (cpiofile);
@@ -144,25 +256,41 @@ android_patch_ramdisk (boot_img_hdr * hdr)
   if (cpio_load (cpiobuf, cobjs, &num))
     goto err_free_buffer;
 
-  // EXAMPLE: patching
-  for (i = 0; i < num; i++)
+  // load multiboot files
+  if (android_add_multiboot_files (&mblist))
+    goto err_free_buffer;
+
+  // create folder
+  x = num++;
+  android_cpio_make_directory (&cobjs[x]);
+  cobjs[x].name = grub_strdup (mbdir);
+  cobjs[x].namesize = grub_strlen (cobjs[x].name) + 1;
+  cobjs[x].data = NULL;
+  cobjs[x].filesize = 0;
+  cobjs[x].ignore = 0;
+
+  // copy all files into the new ramdisk
+  for (i = 0; i < mblist.num_files; i++)
     {
-      if (!grub_strncmp (cobjs[i].name, "init", cobjs[i].namesize))
-	{
-      // make a copy
-      grub_printf("found /init!\n");
-	  unsigned long x = num++;
-	  cobjs[x] = cobjs[i];
+      char *path;
+      int pathlen;
+      struct multiboot_file *mbfile = &mblist.files[i];
 
-      // name
-	  cobjs[x].name = grub_strdup ("sbin/grubinit");
-	  cobjs[x].namesize = grub_strlen(cobjs[x].name)+1;
+      // create new file
+      x = num++;
+      android_cpio_make_executable_file (&cobjs[x]);
 
-      // data
-	  cobjs[x].data = grub_strdup ("#!/sbin/sh\n/init\n");
-	  cobjs[x].filesize = grub_strlen (cobjs[x].data);
+      // get full filename
+      pathlen = grub_strlen (mbdir) + grub_strlen (mbfile->name) + 2;
+      path = grub_malloc (pathlen);
+      grub_snprintf (path, pathlen, "%s/%s", mbdir, mbfile->name);
 
-	}
+      // set file name and contents
+      cobjs[x].name = path;
+      cobjs[x].namesize = grub_strlen (cobjs[x].name) + 1;
+      cobjs[x].data = mbfile->data;
+      cobjs[x].filesize = mbfile->size;
+      cobjs[x].ignore = 0;
     }
 
   // create new ramdisk
@@ -243,8 +371,8 @@ android_load (struct source *src __attribute__ ((unused)))
   grub_size_t dt_size = ALIGN (hdr->dt_size, hdr->page_size);
 
   // update addresses
-  int is_arm64 = IS_ARM64(hdr->kernel_addr + hdr->page_size);
-  grub_uboot_boot_update_addresses(hdr, is_arm64);
+  int is_arm64 = IS_ARM64 (hdr->kernel_addr + hdr->page_size);
+  grub_uboot_boot_update_addresses (hdr, is_arm64);
 
   // load kernel
   grub_off_t offset = hdr->page_size;
@@ -283,14 +411,14 @@ android_load (struct source *src __attribute__ ((unused)))
 
   // use grubinit as init binary
   hdr->cmdline[BOOT_ARGS_SIZE - 1] = '\0';
-  const char *root = " rdinit=/sbin/grubinit";
+  const char *root = " rdinit=/multiboot/init";
   char *cmdline =
     grub_malloc (grub_strlen ((char *) hdr->cmdline) + grub_strlen (root) +
 		 1);
 
   memcpy (cmdline, hdr->cmdline, grub_strlen ((char *) hdr->cmdline));
   memcpy (cmdline + grub_strlen ((char *) hdr->cmdline), root,
-	  grub_strlen (root)+1);
+	  grub_strlen (root) + 1);
 
   // create tags
   info.tags_addr = (void *) hdr->tags_addr;
