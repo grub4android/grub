@@ -31,7 +31,7 @@ typedef struct
   char *name;
   int namesize;
   void *data;
-  ot_type filesize;
+  int filesize;
   int ignore;
 } CPIO_OBJ;
 
@@ -46,5 +46,9 @@ typedef struct
 int cpio_load (void *ptr, CPIO_OBJ * cpio_obj, unsigned long *len);
 int cpio_write (CPIO_OBJ * cpio_obj, int num, void *destination,
 		unsigned *size);
+grub_err_t
+android_cpio_make_executable_file(CPIO_OBJ *obj);
+grub_err_t
+android_cpio_make_directory(CPIO_OBJ *obj);
 
 #endif /* CPIO_H */
