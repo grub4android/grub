@@ -860,6 +860,7 @@ show_menu (grub_menu_t menu, int nested, int autobooted)
       int boot_entry;
       grub_menu_entry_t e;
       int auto_boot;
+      int i;
 
       boot_entry = run_menu (menu, nested, &auto_boot);
       if (boot_entry < 0)
@@ -869,6 +870,11 @@ show_menu (grub_menu_t menu, int nested, int autobooted)
       if (! e)
 	continue; /* Menu is empty.  */
 
+      for (i = 0; e->classes && e->classes[i].name; i++)
+	{
+	  if (!grub_strcmp (e->classes[i].name, "leave"))
+	    return GRUB_ERR_NONE;
+	}
       grub_cls ();
 
       if (auto_boot)
