@@ -29,13 +29,15 @@
 #include <grub/android.h>
 #include <grub/lib/cpio.h>
 #include <grub/lib/cmdline.h>
+#include <grub/env.h>
 
 GRUB_MOD_LICENSE ("GPLv3+");
 
 #define ALIGN(x,ps) (((x) + (ps)-1) & (~((ps)-1)))
 #define CPIO_MAX_FILES 2048
 #define MAX_RAMDISK_SIZE 20*1024*1024
-#define INITRD " rdinit=/multiboot/init "
+#define CMDLINE_GRUBDIR " multiboot.grubdir="
+#define CMDLINE_INITRD " rdinit=/multiboot/init "
 typedef void (*kernel_entry_t) (int, unsigned long, void *);
 
 static grub_dl_t my_mod;
@@ -350,7 +352,8 @@ android_load (struct source *src
 {
   boot_img_hdr *hdr;
   struct tags_info info;
-  int size_linux_args, size_bootimg_cmdline;
+  grub_size_t size_linux_args, size_bootimg_cmdline, size_initrd,
+    size_grubdir_key, size_grubdir_val;
 
   // init
   memset (&info, 0, sizeof (info));
@@ -414,20 +417,49 @@ android_load (struct source *src
   if (android_patch_ramdisk (hdr))
     goto err_free_dt;
 
-  // allocate memory for cmdline
+  // calculate cmdline size
   size_linux_args = grub_loader_cmdline_size (argc, argv);
   size_bootimg_cmdline = grub_strlen ((const char *) hdr->cmdline);
-  linux_args =
-    grub_malloc (size_bootimg_cmdline + sizeof (INITRD) + size_linux_args);
+  size_initrd = grub_strlen (CMDLINE_INITRD);
+  grub_size_t cmdline_size = size_linux_args + size_bootimg_cmdline;
+  cmdline_size += size_initrd;
+
+  const char *grubdir_val = grub_env_get ("cmdpath");
+  size_grubdir_key = grub_strlen (CMDLINE_GRUBDIR);
+  size_grubdir_val = grub_strlen (grubdir_val);
+  cmdline_size += size_grubdir_key + size_grubdir_val;
+
+  // allocate memory for cmdline
+  linux_args = grub_malloc (cmdline_size + 1);
   if (!linux_args)
     goto err_free_dt;
 
+  //
   // create cmdline
-  grub_memcpy (linux_args, hdr->cmdline, size_bootimg_cmdline);
-  grub_memcpy (linux_args + size_bootimg_cmdline, INITRD, sizeof (INITRD));
+  //
+
+  // bootimg args
+  int cmdline_pos = 0;
+  grub_memcpy (linux_args + cmdline_pos, hdr->cmdline, size_bootimg_cmdline);
+  cmdline_pos += size_bootimg_cmdline;
+
+  // grubdir
+  grub_memcpy (linux_args + cmdline_pos, CMDLINE_GRUBDIR, size_grubdir_key);
+  cmdline_pos += size_grubdir_key;
+  grub_memcpy (linux_args + cmdline_pos, grubdir_val, size_grubdir_val);
+  cmdline_pos += size_grubdir_val;
+
+  // initrd
+  grub_memcpy (linux_args + cmdline_pos, CMDLINE_INITRD, size_initrd);
+  cmdline_pos += size_initrd;
+
+  // linux args
   grub_create_loader_cmdline (argc, argv,
-			      linux_args + size_bootimg_cmdline +
-			      sizeof (INITRD) - 1, size_linux_args);
+			      linux_args + cmdline_pos, size_linux_args);
+  cmdline_pos += size_linux_args;
+
+  // terminate
+  linux_args[cmdline_pos] = '\0';
 
   // create tags
   info.tags_addr = (void *) hdr->tags_addr;
