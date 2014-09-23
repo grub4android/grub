@@ -752,6 +752,10 @@ run_menu (grub_menu_t menu, int nested, int *auto_boot)
 		    }
 		  current_entry--;
 		}
+	      else
+		{
+		  current_entry = menu->size - 1;
+		}
 	      menu_set_chosen_entry (current_entry);
 	      break;
 
@@ -786,6 +790,10 @@ run_menu (grub_menu_t menu, int nested, int *auto_boot)
 
 		    }
 		  current_entry++;
+		}
+	      else
+		{
+		  current_entry = 0;
 		}
 	      menu_set_chosen_entry (current_entry);
 	      break;
