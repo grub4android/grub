@@ -1,3 +1,76 @@
+2014-09-25  Colin Watson  <cjwatson@ubuntu.com>
+
+	Fix in-tree --platform=none
+
+	* configure.ac: Only remove include/grub/cpu and
+	include/grub/machine in the --platform=none case, not all of
+	include/grub.
+
+2014-09-23  Colin Watson  <cjwatson@ubuntu.com>
+
+	Add a new "none" platform that only builds utilities
+
+	* configure.ac: Add "none" platform.  Default to it for unsupported
+	CPUs rather than stopping with a fatal error.  Don't downgrade
+	x86_64-none to i386.  Define COND_real_platform Automake conditional
+	if the platform is anything other than "none".  Don't do any include
+	directory linking for "none".
+	* Makefile.am: Skip building grub-core and all bootcheck targets if
+	!COND_real_platform.
+	* include/grub/time.h: Don't include <grub/cpu/time.h> if GRUB_UTIL
+	is defined.
+
+2014-09-22  Andrei Borzenkov <arvidjaar@gmail.com>
+
+	Use grub_cpu_to_XXX_compile_time for constants.
+
+2014-09-21  Valentin Dornauer  <valentin@unimplemented.org>
+
+	The AML parser implements only a small subset of possible AML
+	opcodes. On the Fujitsu Lifebook E744 this and another bug in
+	the parser (incorrect handling of TermArg data types) would lead
+	to the laptop not turning off (_S5 not found).
+
+	* grub-core/commands/acpihalt.c: Support OpAlias in the AML parser;
+	in skip_ext_op(), handle some Type2Opcodes more correctly (TermArgs
+	aren't always simply strings!); Add function to skip TermArgs
+	* include/grub/acpi.h: Add new opcodes
+
+2014-09-21  Vladimir Serbinenko  <phcoder@gmail.com>
+
+	* grub-core/normal/main.c: Don't drop to rescue console in
+	case of password-protected prompt and no menu entries.
+
+2014-09-21  Vladimir Serbinenko  <phcoder@gmail.com>
+
+	* grub-core/commands/keylayouts.c: Ignore unknown keys.
+
+2014-09-21  Vladimir Serbinenko  <phcoder@gmail.com>
+
+	* grub-core/gmodule.pl.in: Accept newer binutils which output
+	empty column rather than 0x0.
+
+2014-09-21  Michael Chang  <mchang@suse.com>
+
+	* grub-core/osdep/unix/config.c: Remove extraneous comma.
+
+2014-09-21  Peter Jones  <pjones@redhat.com>
+
+	* grub-core/loader/arm/linux.c: Initialized initrd_ctx so
+	we don't free a random pointer from the stack.
+	* grub-core/loader/arm64/linux.c: Likewise.
+	* grub-core/loader/i386/linux.c: Likewise.
+	* grub-core/loader/i386/pc/linux.c: Likewise.
+	* grub-core/loader/ia64/efi/linux.c: Likewise.
+	* grub-core/loader/mips/linux.c: Likewise.
+	* grub-core/loader/powerpc/ieee1275/linux.c: Likewise.
+	* grub-core/loader/sparc64/ieee1275/linux.c: Likewise.
+
+2014-09-15  Khem Raj  <raj.khem@gmail.com>
+
+	* grub-core/kern/emu/hostfs.c: use _DEFAULT_SOURCE in addition to
+	_BSD_SOURCE to avoid warnings under glibc 2.20+.
+
 2014-09-08  Michael Chang  <mchang@suse.com>
 
 	* grub-core/fs/btrfs.c (grub_btrfs_extent_read): Fix extent size
@@ -938,10 +1011,6 @@
 
 	Allow compilation without thumb-interwork as long as no thumb is
 	involved or only thumb2 is used.
-
-2013-12-18  Vladimir Serbinenko  <phcoder@gmail.com>
-
-	Use -Wl,--no-relax rather than -mno-relax for uniformity.
 
 2013-12-18  Vladimir Serbinenko  <phcoder@gmail.com>
 
