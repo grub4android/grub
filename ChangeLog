@@ -1,3 +1,106 @@
+2014-12-09  Andrei Borzenkov  <arvidjaar@gmail.com>
+
+	* grub-core/term/serial.c (grub_cmd_serial): Fix --rtscts
+	option processing.
+
+2014-12-07  David Kozub  <zub.272@gmail.com>
+
+	* grub-core/kern/arm/misc.S: fix unaligned 64bit local variable
+	in __aeabi_uidivmod
+	Fixes Savannah bug #43632.
+
+2014-12-07  Peter Nelson <peterdn>
+
+	* grub-core/fs/ext2.c (grub_ext2_read_block): Support large sparse
+	chunks.
+
+2014-12-07  Andrei Borzenkov  <arvidjaar@gmail.com>
+
+	* util/grub-mkconfig_lib.in (version_test_gt): Remove redundant
+	non-portable '-n' echo option.
+	* util/grub.d/10_kfreebsd.in: Change how list is built to avoid
+	non-portable 'echo -n.
+	* util/grub.d/10_linux.in: Likewise (closes 43668).
+	* util/grub.d/20_linux_xen.in: Likewise.
+	* util/grub.d/30_os-prober.in: Print spaces directly to avoid
+	non-portable 'echo -n'.
+
+2014-12-07  Curtis Larsen <larsen@dixie.edu>
+
+	* grub-core/net/tcp.c (grub_net_recv_tcp_packet): Fix double
+	free when multiple empty segments were received (closes 42765).
+
+2014-12-05  Andrei Borzenkov  <arvidjaar@gmail.com>
+
+	* tests/util/grub-shell.in: Support --files also for netboot.
+	* tests/file_filter_test.in: New file with file filters tests.
+	* Makefile.util.def: Add file_filter_test.
+	* conf/Makefile.extra-dist: ... and here.
+	* tests/file_filter/file.gz: Test file for file_filter_test.
+	* tests/file_filter/file.gz.sig: Likewise.
+	* tests/file_filter/file.lzop: Likewise.
+	* tests/file_filter/file.lzop.sig: Likewise.
+	* tests/file_filter/file.xz: Likewise.
+	* tests/file_filter/file.xz.sig: Likewise.
+	* tests/file_filter/keys: Likewise.
+	* tests/file_filter/keys.pub: Likewise.
+	* tests/file_filter/test.cfg: Likewise.
+	* grub-core/commands/verify.c: Fix memory corruption doing
+	signature check for network files (closes 43601).
+
+2014-12-01  Andrei Borzenkov  <arvidjaar@gmail.com>
+
+	* grub-core/loader/i386/xen_fileXX.c (grub_xen_get_infoXX): Fix
+	memory leak (CID 73645, 73782).
+	* grub-core/fs/zfs/zfsinfo.c (print_vdev_info): Fix memory leak
+	(CID 73635).
+
+2014-11-30  Andrei Borzenkov  <arvidjaar@gmail.com>
+
+	* grub-core/lib/syslinux_parse.c (free_menu): Do not free
+	inline array (CID 73610).
+
+2014-11-28  Andrei Borzenkov  <arvidjaar@gmail.com>
+
+	* grub-core/io/lzopio.c (test_header): Fix double free (CID 73665)
+	* grub-core/disk/geli.c (configure_ciphers): Fix memory leaks
+	(Coverity CID 73813, 73710)
+	* grub-core/disk/luks.c (configure_ciphers): Fix memory leaks
+	and use after free (Coverity CID 73813, 73710, 73730)
+	* grub-core/disk/luks.c (luks_recover_key): Fix memory leak (Coverity
+	CID 73854)
+	* util/grub-install-common.c (grub_install_get_target): Check return
+	value of grub_util_fd_read (Coverity CID 73819).
+	* util/grub-mkstandalone.c (add_tar_file): Fix out of bound access
+	to hd.magic (Coverity CID 73587, 73888, bug 43690).
+
+2014-11-20  Andrei Borzenkov  <arvidjaar@gmail.com>
+
+	* tests/util/grub-fs-tester.in: Consistently print output
+	of grub ls if test fails.
+
+2014-11-07  Leif Lindholm <leif.lindholm@linaro.org>
+
+	* grub-core/kern/efi/init.c: check value of *path before
+	dereferencing.
+
+2014-11-03  Michael Chang  <mchang@suse.com>
+
+	* grub-core/net/icmp6.c (grub_net_recv_icmp6_packet): Fix size
+	of neighbor solicitation packet in grub_netbuff_pull.
+
+2014-10-14  Andrei Borzenkov  <arvidjaar@gmail.com>
+
+	* grub-core/loader/arm/linux.c: Use full initializer for initrd_ctx to
+	avoid fatal warnings with older gcc (probably before 4.7).
+	* grub-core/loader/arm64/linux.c: Likewise.
+	* grub-core/loader/i386/linux.c: Likewise.
+	* grub-core/loader/i386/pc/linux.c: Likewise.
+	* grub-core/loader/ia64/efi/linux.c: Likewise.
+	* grub-core/loader/mips/linux.c: Likewise.
+	* grub-core/loader/powerpc/ieee1275/linux.c: Likewise.
+	* grub-core/loader/sparc64/ieee1275/linux.c: Likewise.
+
 2014-09-25  Colin Watson  <cjwatson@ubuntu.com>
 
 	Fix in-tree --platform=none
