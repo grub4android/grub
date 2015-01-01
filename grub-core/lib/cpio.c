@@ -202,7 +202,7 @@ cpio_write (CPIO_OBJ * cpio_obj, int num, void *destination, unsigned *size)
 	obj = &cpio_obj[i];
 
       // skip ignored objects
-      if (cpio_obj[i].ignore)
+      if (obj->ignore)
 	continue;
 
       // header
