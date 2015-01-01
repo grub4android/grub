@@ -37,7 +37,8 @@ GRUB_MOD_LICENSE ("GPLv3+");
 #define CPIO_MAX_FILES 2048
 #define MAX_RAMDISK_SIZE 20*1024*1024
 #define CMDLINE_GRUBDIR " multiboot.grubdir="
-#define CMDLINE_INITRD " rdinit=/multiboot/init "
+#define CMDLINE_INITRD " rdinit=/multiboot/sbin/init "
+#define GRUB_RAMDISK_PATH "bootloader"
 typedef void (*kernel_entry_t) (int, unsigned long, void *);
 
 static grub_dl_t my_mod;
@@ -139,12 +140,18 @@ android_multiboot_iterate_dir (const char *filename,
   if (info->dir)
     goto out;
   char *fullname;
-  int namesize = grub_strlen (mblist->prefix) + grub_strlen (filename) + 1;
+  int namesize;
   grub_file_t file;
+  const char *prefix = grub_env_get ("prefix");
+
+  namesize =
+    (prefix ? grub_strlen (prefix) : 0) + 3 + grub_strlen (mblist->prefix) +
+    grub_strlen (filename) + 1;
 
   // get full filename
   fullname = grub_malloc (namesize);
-  grub_snprintf (fullname, namesize, "%s%s", mblist->prefix, filename);
+  grub_snprintf (fullname, namesize, "%s/..%s%s", prefix ? prefix : "",
+		 mblist->prefix, filename);
 
   // open file
   file = grub_file_open (fullname);
@@ -214,13 +221,115 @@ android_add_multiboot_files (struct multiboot_filelist *mblist)
   // add all files
   mblist->num_files = 0;
   mblist->files = NULL;
-  mblist->prefix = "/boot/grub/multiboot/";
-  if (fs->dir (dev, mblist->prefix, android_multiboot_iterate_dir, mblist))
+  mblist->prefix = "/multiboot/";
+
+  struct grub_dirhook_info info;
+  info.dir = 0;
+
+  if (android_multiboot_iterate_dir ("sbin/init", &info, mblist))
+    goto fail;
+  if (android_multiboot_iterate_dir ("sbin/busybox", &info, mblist))
     goto fail;
 
   return GRUB_ERR_NONE;
 
 fail:
+  return grub_errno;
+}
+
+static grub_err_t
+android_add_grub_ramdisk (CPIO_OBJ * in_cobjs, unsigned long *in_num,
+			  unsigned int *rdsize)
+{
+  unsigned int i;
+  unsigned long x;
+  char *cpiobuf = NULL;
+  grub_size_t cpiosize = 0;
+  grub_file_t cpiofile = 0;
+
+  // if the rootdev is a partition, we assume that it's a ramdisk
+  // this would result in unwanted behaviour if a device contains
+  // a filesystem only without a partition table.
+  const char *rootdev = grub_env_get ("root");
+  if (grub_strchr (rootdev, ','))
+    return GRUB_ERR_NONE;
+
+  // open disk
+  grub_disk_t disk = grub_disk_open (rootdev);
+  if (!disk)
+    goto err_free_buffer;
+  grub_size_t disksize = grub_disk_get_size (disk) * GRUB_DISK_SECTOR_SIZE;
+  (*rdsize) += disksize;
+
+  // allocate memory
+  void *diskdata = grub_malloc (disksize);
+  if (!diskdata)
+    goto err_free_buffer;
+
+  // read whole disk
+  if (grub_disk_read (disk, 0, 0, disksize, diskdata))
+    goto err_free_buffer;
+
+  // close disk
+  grub_disk_close (disk);
+
+  // open file
+  cpiofile = grub_memfile_open (diskdata, disksize);
+  if (!cpiofile)
+    goto err_out;
+  cpiosize = grub_file_size (cpiofile);
+
+  // create buffer
+  cpiobuf = grub_malloc (cpiosize);
+  if (!cpiobuf)
+    goto err_close_cpiofile;
+
+  // read file into buffer
+  if (grub_file_read (cpiofile, cpiobuf, cpiosize) != (grub_ssize_t) cpiosize)
+    {
+      if (!grub_errno)
+	grub_error (GRUB_ERR_BAD_OS, N_("premature end of ramdisk file"));
+      goto err_free_buffer;
+    }
+
+  // parse CPIO
+  unsigned long num = cpiosize;
+  CPIO_OBJ cobjs[CPIO_MAX_FILES];
+  if (cpio_load (cpiobuf, cobjs, &num))
+    goto err_free_buffer;
+
+  // create folder
+  cpio_mkdir (&in_cobjs[(*in_num)++], GRUB_RAMDISK_PATH);
+
+  // copy all entries from grubrd to androidrd
+  for (i = 0; i < num; i++)
+    {
+      if (!grub_strcmp (cobjs[i].name, "."))
+	continue;
+
+      x = (*in_num)++;
+      memcpy (&in_cobjs[x], &cobjs[i], sizeof (CPIO_OBJ));
+
+      char namebuf[2048];
+      grub_snprintf (namebuf, 2048, GRUB_RAMDISK_PATH "/%s",
+		     in_cobjs[x].name);
+      in_cobjs[x].name = grub_strdup (namebuf);
+      in_cobjs[x].namesize = grub_strlen (in_cobjs[x].name) + 1;
+    }
+
+  // cleanup
+  grub_free (diskdata);
+  grub_free (cpiobuf);
+  grub_file_close (cpiofile);
+
+
+  return GRUB_ERR_NONE;
+
+err_free_buffer:
+  grub_free (cpiobuf);
+err_close_cpiofile:
+  grub_file_close (cpiofile);
+err_out:
   return grub_errno;
 }
 
@@ -234,6 +343,7 @@ android_patch_ramdisk (boot_img_hdr * hdr)
   grub_size_t cpiosize = 0;
   grub_file_t cpiofile = 0;
   struct multiboot_filelist mblist;
+  memset (&mblist, 0, sizeof (mblist));
 
   // open file
   cpiofile =
@@ -266,13 +376,8 @@ android_patch_ramdisk (boot_img_hdr * hdr)
     goto err_free_buffer;
 
   // create folder
-  x = num++;
-  android_cpio_make_directory (&cobjs[x]);
-  cobjs[x].name = grub_strdup (mbdir);
-  cobjs[x].namesize = grub_strlen (cobjs[x].name) + 1;
-  cobjs[x].data = NULL;
-  cobjs[x].filesize = 0;
-  cobjs[x].ignore = 0;
+  cpio_mkdir (&cobjs[num++], mbdir);
+  cpio_mkdir (&cobjs[num++], "multiboot/sbin");
 
   // copy all files into the new ramdisk
   for (i = 0; i < mblist.num_files; i++)
@@ -298,8 +403,11 @@ android_patch_ramdisk (boot_img_hdr * hdr)
       cobjs[x].ignore = 0;
     }
 
-  // create new ramdisk
   unsigned int size = MAX_RAMDISK_SIZE;
+  if (android_add_grub_ramdisk (cobjs, &num, &size))
+    goto err_free_buffer;
+
+  // create new ramdisk
   if (cpio_write (cobjs, num, (void *) hdr->ramdisk_addr, &size))
     goto err_free_buffer;
   hdr->ramdisk_size = size;

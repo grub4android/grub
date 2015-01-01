@@ -50,5 +50,7 @@ grub_err_t
 android_cpio_make_executable_file(CPIO_OBJ *obj);
 grub_err_t
 android_cpio_make_directory(CPIO_OBJ *obj);
+grub_err_t
+cpio_mkdir (CPIO_OBJ * obj, const char *name);
 
 #endif /* CPIO_H */

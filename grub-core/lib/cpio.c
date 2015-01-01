@@ -288,6 +288,19 @@ android_cpio_make_directory (CPIO_OBJ * obj)
   return GRUB_ERR_NONE;
 }
 
+grub_err_t
+cpio_mkdir (CPIO_OBJ * obj, const char *name)
+{
+  android_cpio_make_directory (obj);
+  obj->name = grub_strdup (name);
+  obj->namesize = grub_strlen (obj->name) + 1;
+  obj->data = NULL;
+  obj->filesize = 0;
+  obj->ignore = 0;
+
+  return GRUB_ERR_NONE;
+}
+
 // returns num of objects
 int
 cpio_load (void *ptr, CPIO_OBJ * cpio_obj, unsigned long *len)
