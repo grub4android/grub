@@ -280,6 +280,10 @@ main (int argc, char *argv[])
       free (program);
       exit(1);
     }
+  else if(!strcmp(arguments.prefix, "NULL"))
+    {
+      arguments.prefix = NULL;
+    }
 
   if (arguments.output)
     {
