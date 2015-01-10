@@ -37,7 +37,7 @@ GRUB_MOD_LICENSE ("GPLv3+");
 #define CPIO_MAX_FILES 2048
 #define MAX_RAMDISK_SIZE 20*1024*1024
 #define CMDLINE_GRUBDIR " multiboot.grubdir="
-#define CMDLINE_INITRD " rdinit=/multiboot/sbin/init androidboot.selinux=permissive "
+#define CMDLINE_INITRD " rdinit=/multiboot/sbin/init "
 #define GRUB_RAMDISK_PATH "bootloader"
 typedef void (*kernel_entry_t) (int, unsigned long, void *);
 
