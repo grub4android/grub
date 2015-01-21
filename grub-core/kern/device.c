@@ -89,12 +89,14 @@ struct part_ent
 {
   struct part_ent *next;
   char *name;
+  char *partname;
 };
 
 /* Context for grub_device_iterate.  */
 struct grub_device_iterate_ctx
 {
   grub_device_iterate_hook_t hook;
+  grub_device_partname_iterate_hook_t hook_partname;
   void *hook_data;
   struct part_ent *ents;
 };
@@ -128,6 +130,7 @@ iterate_partition (grub_disk_t disk, const grub_partition_t partition,
       return 1;
     }
 
+  p->partname = grub_xasprintf ("%s", partition->name);
   p->next = ctx->ents;
   ctx->ents = p;
 
@@ -141,7 +144,7 @@ iterate_disk (const char *disk_name, void *data)
   struct grub_device_iterate_ctx *ctx = data;
   grub_device_t dev;
 
-  if (ctx->hook (disk_name, ctx->hook_data))
+  if (ctx->hook && ctx->hook (disk_name, ctx->hook_data))
     return 1;
 
   dev = grub_device_open (disk_name);
@@ -168,7 +171,13 @@ iterate_disk (const char *disk_name, void *data)
 	  struct part_ent *next = p->next;
 
 	  if (!ret)
-	    ret = ctx->hook (p->name, ctx->hook_data);
+	    {
+	      if (ctx->hook_partname)
+		ret =
+		  ctx->hook_partname (p->partname, p->name, ctx->hook_data);
+	      if (ctx->hook)
+		ret = ctx->hook (p->name, ctx->hook_data);
+	    }
 	  grub_free (p->name);
 	  grub_free (p);
 	  p = next;
@@ -184,7 +193,17 @@ iterate_disk (const char *disk_name, void *data)
 int
 grub_device_iterate (grub_device_iterate_hook_t hook, void *hook_data)
 {
-  struct grub_device_iterate_ctx ctx = { hook, hook_data, NULL };
+  struct grub_device_iterate_ctx ctx = { hook, NULL, hook_data, NULL };
+
+  /* Only disk devices are supported at the moment.  */
+  return grub_disk_dev_iterate (iterate_disk, &ctx);
+}
+
+int
+grub_device_iterate_partname (grub_device_partname_iterate_hook_t hook,
+			      void *hook_data)
+{
+  struct grub_device_iterate_ctx ctx = { NULL, hook, hook_data, NULL };
 
   /* Only disk devices are supported at the moment.  */
   return grub_disk_dev_iterate (iterate_disk, &ctx);

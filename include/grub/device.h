@@ -34,10 +34,13 @@ struct grub_device
 typedef struct grub_device *grub_device_t;
 
 typedef int (*grub_device_iterate_hook_t) (const char *name, void *data);
+typedef int (*grub_device_partname_iterate_hook_t) (const char* partname, const char *name, void *data);
 
 grub_device_t EXPORT_FUNC(grub_device_open) (const char *name);
 grub_err_t EXPORT_FUNC(grub_device_close) (grub_device_t device);
 int EXPORT_FUNC(grub_device_iterate) (grub_device_iterate_hook_t hook,
+				      void *hook_data);
+int EXPORT_FUNC(grub_device_iterate_partname) (grub_device_partname_iterate_hook_t hook,
 				      void *hook_data);
 
 #endif /* ! GRUB_DEVICE_HEADER */
