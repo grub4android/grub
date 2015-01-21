@@ -56,7 +56,7 @@ grub_gpt_partition_map_iterate (grub_disk_t disk,
   struct grub_gpt_partentry entry;
   struct grub_msdos_partition_mbr mbr;
   grub_uint64_t entries;
-  unsigned int i;
+  unsigned int i, j;
   int last_offset = 0;
   int sector_log = 0;
 
@@ -109,9 +109,20 @@ grub_gpt_partition_map_iterate (grub_disk_t disk,
 	  part.partmap = &grub_gpt_partition_map;
 	  part.parent = disk->partition;
 
-	  grub_dprintf ("gpt", "GPT entry %d: start=%lld, length=%lld\n", i,
+	  /*
+	   * Currently partition names in *.xml are UTF-8 and lowercase
+	   * Only supporting english for now so removing 2nd byte of UTF-16
+	   */
+
+	  for (j = 0; j < 72 / 2; j++)
+	    {
+	      part.name[j] = entry.name[j * 2];
+	    }
+
+	  grub_dprintf ("gpt", "GPT entry %d: start=%lld, length=%lld name=%s\n", i,
 			(unsigned long long) part.start,
-			(unsigned long long) part.len);
+			(unsigned long long) part.len,
+			part.name);
 
 	  if (hook (disk, &part, hook_data))
 	    return grub_errno;
