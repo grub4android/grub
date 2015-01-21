@@ -51,33 +51,12 @@ static int num_devices;
 int
 grub_uboot_api_init (void)
 {
-  struct api_signature *start, *end;
-  struct api_signature *p;
-
-  if (grub_uboot_search_hint)
-    {
-      /* Extended search range to work around Trim Slice U-Boot issue */
-      start = (struct api_signature *) ((grub_uboot_search_hint & ~0x000fffff)
-					- 0x00500000);
-      end =
-	(struct api_signature *) ((grub_addr_t) start + UBOOT_API_SEARCH_LEN -
-				  API_SIG_MAGLEN + 0x00500000);
-    }
-  else
-    {
-      start = 0;
-      end = (struct api_signature *) (256 * 1024 * 1024);
-    }
-
-  /* Structure alignment is (at least) 8 bytes */
-  for (p = start; p < end; p = (void *) ((grub_addr_t) p + 8))
-    {
-      if (grub_memcmp (&(p->magic), API_SIG_MAGIC, API_SIG_MAGLEN) == 0)
-	{
-	  grub_uboot_syscall_ptr = p->syscall;
-	  return p->version;
-	}
-    }
+  struct api_signature *p = (void*)grub_uboot_get_boot_data();
+  if (grub_memcmp (&(p->magic), API_SIG_MAGIC, API_SIG_MAGLEN) == 0)
+  {
+    grub_uboot_syscall_ptr = p->syscall;
+    return p->version;
+  }
 
   return 0;
 }
