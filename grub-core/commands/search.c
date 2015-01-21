@@ -54,6 +54,28 @@ struct search_ctx
   int is_cache;
 };
 
+#ifdef DO_SEARCH_PARTNAME
+static int
+iterate_device_partname (const char *partname, const char *name, void *data)
+{
+  struct search_ctx *ctx = data;
+  int found = 0;
+
+  if (grub_strcmp (partname, ctx->key) == 0)
+    {
+      found = 1;
+      ctx->count++;
+      if (ctx->var)
+	grub_env_set (ctx->var, name);
+      else
+	grub_printf (" %s", name);
+    }
+
+  grub_errno = GRUB_ERR_NONE;
+  return (found && ctx->var);
+}
+#endif
+
 /* Helper for FUNC_NAME.  */
 static int
 iterate_device (const char *name, void *data)
@@ -257,7 +279,11 @@ try (struct search_ctx *ctx)
 	    return;
 	}
     }
+#ifdef DO_SEARCH_PARTNAME
+  grub_device_iterate_partname (iterate_device_partname, ctx);
+#else
   grub_device_iterate (iterate_device, ctx);
+#endif
 }
 
 void
@@ -315,6 +341,8 @@ static grub_command_t cmd;
 GRUB_MOD_INIT(search_fs_file)
 #elif defined (DO_SEARCH_FS_UUID)
 GRUB_MOD_INIT(search_fs_uuid)
+#elif defined (DO_SEARCH_PARTNAME)
+GRUB_MOD_INIT(search_part_name)
 #else
 GRUB_MOD_INIT(search_label)
 #endif
@@ -329,6 +357,8 @@ GRUB_MOD_INIT(search_label)
 GRUB_MOD_FINI(search_fs_file)
 #elif defined (DO_SEARCH_FS_UUID)
 GRUB_MOD_FINI(search_fs_uuid)
+#elif defined (DO_SEARCH_PARTNAME)
+GRUB_MOD_FINI(search_part_name)
 #else
 GRUB_MOD_FINI(search_label)
 #endif

@@ -36,6 +36,8 @@ static const struct grub_arg_option options[] =
      0, 0},
     {"fs-uuid",		'u', 0, N_("Search devices by a filesystem UUID."),
      0, 0},
+    {"part-name",	'p', 0, N_("Search devices by a partition name."),
+     0, 0},
     {"set",		's', GRUB_ARG_OPTION_OPTIONAL,
      N_("Set a variable to the first device found."), N_("VARNAME"),
      ARG_TYPE_STRING},
@@ -71,6 +73,7 @@ enum options
     SEARCH_FILE,
     SEARCH_LABEL,
     SEARCH_FS_UUID,
+    SEARCH_PARTNAME,
     SEARCH_SET,
     SEARCH_NO_FLOPPY,
     SEARCH_HINT,
@@ -186,6 +189,9 @@ grub_cmd_search (grub_extcmd_context_t ctxt, int argc, char **args)
   else if (state[SEARCH_FILE].set)
     grub_search_fs_file (id, var, state[SEARCH_NO_FLOPPY].set, 
 			 hints, nhints);
+  else if (state[SEARCH_PARTNAME].set)
+    grub_search_partname (id, var, state[SEARCH_NO_FLOPPY].set,
+			 hints, nhints);
   else
     return grub_error (GRUB_ERR_INVALID_COMMAND, "unspecified search type");
 
@@ -199,10 +205,10 @@ GRUB_MOD_INIT(search)
   cmd =
     grub_register_extcmd ("search", grub_cmd_search,
 			  GRUB_COMMAND_FLAG_EXTRACTOR | GRUB_COMMAND_ACCEPT_DASH,
-			  N_("[-f|-l|-u|-s|-n] [--hint HINT [--hint HINT] ...]"
+			  N_("[-f|-l|-u|-p|-s|-n] [--hint HINT [--hint HINT] ...]"
 			     " NAME"),
-			  N_("Search devices by file, filesystem label"
-			     " or filesystem UUID."
+			  N_("Search devices by file, filesystem label,"
+			     " filesystem UUID or partition name."
 			     " If --set is specified, the first device found is"
 			     " set to a variable. If no variable name is"
 			     " specified, `root' is used."),
