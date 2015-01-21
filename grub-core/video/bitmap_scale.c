@@ -60,6 +60,9 @@ grub_video_bitmap_scale (struct grub_video_bitmap *dst,
                          struct grub_video_bitmap *src,
                          enum grub_video_bitmap_scale_method scale_method)
 {
+  // HACK: force fastest method
+  scale_method = GRUB_VIDEO_BITMAP_SCALE_METHOD_FASTEST;
+
   switch (scale_method)
     {
     case GRUB_VIDEO_BITMAP_SCALE_METHOD_FASTEST:
