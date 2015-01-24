@@ -360,11 +360,11 @@ grub_uboot_boot_create_tags (struct tags_info *info)
 }
 
 int
-grub_uboot_boot_prepare (void)
+grub_uboot_boot_execute (void* addr, int machtype, void* atags)
 {
   int retval;
 
-  if (!grub_uboot_syscall (API_BOOT_PREPARE, &retval))
+  if (!grub_uboot_syscall (API_BOOT_EXECUTE, &retval, addr, machtype, atags))
     return 0;
 
   return retval;

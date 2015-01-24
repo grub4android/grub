@@ -39,7 +39,6 @@ GRUB_MOD_LICENSE ("GPLv3+");
 #define CMDLINE_GRUBDIR " multiboot.grubdir="
 #define CMDLINE_INITRD " rdinit=/multiboot/sbin/init "
 #define GRUB_RAMDISK_PATH "bootloader"
-typedef void (*kernel_entry_t) (int, unsigned long, void *);
 
 static grub_dl_t my_mod;
 static char *linux_args;
@@ -432,23 +431,23 @@ err_out:
 static grub_err_t
 android_boot (void)
 {
-  kernel_entry_t linuxmain;
+  void* linuxmain;
 
   if (!bootinfo.hdr)
     return grub_error (GRUB_ERR_BUG, "Invalid boot header");
 
   if (bootinfo.hdr->second_size > 0)
-    linuxmain = (kernel_entry_t) bootinfo.hdr->second_addr;
+    linuxmain = (void*) bootinfo.hdr->second_addr;
   else
-    linuxmain = (kernel_entry_t) bootinfo.hdr->kernel_addr;
+    linuxmain = (void*) bootinfo.hdr->kernel_addr;
 
   grub_arm_disable_caches_mmu ();
-  grub_uboot_boot_prepare ();
   grub_printf
     ("Booting kernel @ %p, ramdisk @ 0x%08x (%d), tags/device tree @ 0x%08x\n",
      linuxmain, bootinfo.hdr->ramdisk_addr, bootinfo.hdr->ramdisk_size,
      bootinfo.hdr->tags_addr);
-  linuxmain (0, grub_uboot_get_machine_type (),
+
+  grub_uboot_boot_execute (linuxmain, grub_uboot_get_machine_type (),
 	     (void *) bootinfo.hdr->tags_addr);
 
   return grub_error (GRUB_ERR_BAD_OS, "Linux call returned");
