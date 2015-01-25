@@ -366,6 +366,14 @@ case "$host_os" in
    ;;
 esac
 
+case "$host_os" in
+  cygwin | windows* | mingw32* | aros*)
+     ;;
+  *)
+     AC_CHECK_SIZEOF(off_t)
+     test x"$ac_cv_sizeof_off_t" = x8 || AC_MSG_ERROR([Large file support is required]);;
+esac
+
 if test x$USE_NLS = xno; then
   HOST_CFLAGS="$HOST_CFLAGS -fno-builtin-gettext"
 fi
@@ -662,6 +670,12 @@ if ( test "x$target_cpu" = xi386 || test "x$target_cpu" = xx86_64 ) && test "x$p
   # registers that aren't set up properly in GRUB.
   TARGET_CFLAGS="$TARGET_CFLAGS -mno-mmx -mno-sse -mno-sse2 -mno-3dnow"
 fi
+
+# GRUB doesn't use float or doubles at all. Yet some toolchains may decide
+# that floats are a good fit to run instead of what's written in the code.
+# Given that floating point unit is disabled (if present to begin with)
+# when GRUB is running which may result in various hard crashes.
+TARGET_CFLAGS="$TARGET_CFLAGS -msoft-float"
 
 # By default, GCC 4.4 generates .eh_frame sections containing unwind
 # information in some cases where it previously did not. GRUB doesn't need

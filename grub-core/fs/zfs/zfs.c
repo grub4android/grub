@@ -252,7 +252,6 @@ struct grub_zfs_data
 
   uberblock_t current_uberblock;
 
-  int mounted;
   grub_uint64_t guid;
 };
 
@@ -957,7 +956,7 @@ nvpair_value (const char *nvp,char **val,
 static grub_err_t
 check_pool_label (struct grub_zfs_data *data,
 		  struct grub_zfs_device_desc *diskdesc,
-		  int *inserted)
+		  int *inserted, int original)
 {
   grub_uint64_t pool_state, txg = 0;
   char *nvlist,*features;
@@ -1081,10 +1080,11 @@ check_pool_label (struct grub_zfs_data *data,
 
   grub_dprintf ("zfs", "check 11 passed\n");
 
-  if (data->mounted && data->guid != poolguid)
-    return grub_error (GRUB_ERR_BAD_FS, "another zpool");
-  else
+  if (original)
     data->guid = poolguid;
+
+  if (data->guid != poolguid)
+    return grub_error (GRUB_ERR_BAD_FS, "another zpool");
 
   {
     char *nv;
@@ -1186,7 +1186,7 @@ scan_disk (grub_device_t dev, struct grub_zfs_data *data,
 	}
       grub_dprintf ("zfs", "label ok %d\n", label);
 
-      err = check_pool_label (data, &desc, inserted);
+      err = check_pool_label (data, &desc, inserted, original);
       if (err || !*inserted)
 	{
 	  grub_errno = GRUB_ERR_NONE;
@@ -1500,6 +1500,9 @@ read_device (grub_uint64_t offset, struct grub_zfs_device_desc *desc,
 	if (desc->nparity < 1 || desc->nparity > 3)
 	  return grub_error (GRUB_ERR_NOT_IMPLEMENTED_YET, 
 			     "raidz%d is not supported", desc->nparity);
+
+	if (desc->n_children <= desc->nparity || desc->n_children < 1)
+	  return grub_error(GRUB_ERR_BAD_FS, "too little devices for given parity");
 
 	orig_s = (((len + (1 << desc->ashift) - 1) >> desc->ashift)
 		  + (desc->n_children - desc->nparity) - 1);
@@ -2804,6 +2807,9 @@ dnode_get_path (struct subvolume *subvol, const char *path_in, dnode_end_t *dn,
 					  dnode_path->dn.endian)
 		       << SPA_MINBLOCKSHIFT);
 
+	      if (blksz == 0)
+		return grub_error(GRUB_ERR_BAD_FS, "0-sized block");
+
 	      sym_value = grub_malloc (sym_sz);
 	      if (!sym_value)
 		return grub_errno;
@@ -3606,8 +3612,6 @@ zfs_mount (grub_device_t dev)
 					 ub_endian) >> 63) & 1;
   grub_free (osp);
 
-  data->mounted = 1;
-
   return data;
 }
 
@@ -3797,6 +3801,12 @@ grub_zfs_read (grub_file_t file, char *buf, grub_size_t len)
 
   blksz = grub_zfs_to_cpu16 (data->dnode.dn.dn_datablkszsec, 
 			     data->dnode.endian) << SPA_MINBLOCKSHIFT;
+
+  if (blksz == 0)
+    {
+      grub_error (GRUB_ERR_BAD_FS, "0-sized block");
+      return -1;
+    }
 
   /*
    * Entire Dnode is too big to fit into the space available.  We
