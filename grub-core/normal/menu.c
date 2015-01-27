@@ -707,6 +707,7 @@ run_menu (grub_menu_t menu, int nested, int *auto_boot)
 	      clear_timeout ();
 	    }
 
+	again:
 	  switch (c)
 	    {
 	    case GRUB_TERM_KEY_HOME:
@@ -724,78 +725,41 @@ run_menu (grub_menu_t menu, int nested, int *auto_boot)
 	    case GRUB_TERM_KEY_UP:
 	    case GRUB_TERM_CTRL | 'p':
 	    case '^':
-	      if (current_entry > 0)
-		{
-		  grub_menu_entry_t e =
-		    grub_menu_get_entry (menu, current_entry - 1);
-		  if (e)
-		    {
-		      int i;
-		      int is_sep = 0;
-		      for (i = 0; e->classes && e->classes[i].name; i++)
-			{
-			  if (!grub_strcmp (e->classes[i].name, "separator"))
-			    {
-			      is_sep = 1;
-			      break;
-			    }
-			}
-
-		      if (is_sep)
-			{
-			  if (current_entry - 1 > 0)
-			    current_entry--;
-			  else
-			    current_entry++;
-			}
-
-		    }
+	      {
+		if (current_entry > 0)
 		  current_entry--;
-		}
-	      else
-		{
+		else
 		  current_entry = menu->size - 1;
-		}
-	      menu_set_chosen_entry (current_entry);
+
+		grub_menu_entry_t e =
+		  grub_menu_get_entry (menu, current_entry);
+		int i;
+		for (i = 0; e->classes && e->classes[i].name; i++)
+		  if (!grub_strcmp (e->classes[i].name, "separator"))
+		    goto again;
+
+		menu_set_chosen_entry (current_entry);
+	      }
 	      break;
 
 	    case GRUB_TERM_CTRL | 'n':
 	    case GRUB_TERM_KEY_DOWN:
 	    case 'v':
-	      if (current_entry < menu->size - 1)
-		{
-
-		  grub_menu_entry_t e =
-		    grub_menu_get_entry (menu, current_entry + 1);
-		  if (e)
-		    {
-		      int i;
-		      int is_sep = 0;
-		      for (i = 0; e->classes && e->classes[i].name; i++)
-			{
-			  if (!grub_strcmp (e->classes[i].name, "separator"))
-			    {
-			      is_sep = 1;
-			      break;
-			    }
-			}
-
-		      if (is_sep)
-			{
-			  if (current_entry + 1 < menu->size - 1)
-			    current_entry++;
-			  else
-			    current_entry--;
-			}
-
-		    }
+	      {
+		if (current_entry < menu->size - 1)
 		  current_entry++;
-		}
-	      else
-		{
+		else
 		  current_entry = 0;
-		}
-	      menu_set_chosen_entry (current_entry);
+
+		grub_menu_entry_t e =
+		  grub_menu_get_entry (menu, current_entry);
+		int i;
+		for (i = 0; e->classes && e->classes[i].name; i++)
+		  if (!grub_strcmp (e->classes[i].name, "separator"))
+		    goto again;
+
+		menu_set_chosen_entry (current_entry);
+	      }
 	      break;
 
 	    case GRUB_TERM_CTRL | 'g':
