@@ -615,14 +615,14 @@ device_map_check_duplicates (const char *dev_map)
   char **d;
   size_t i;
 
-  d = xmalloc (alloced * sizeof (d[0]));
-
   if (dev_map[0] == '\0')
     return;
 
   fp = grub_util_fopen (dev_map, "r");
   if (! fp)
     return;
+
+  d = xmalloc (alloced * sizeof (d[0]));
 
   while (fgets (buf, sizeof (buf), fp))
     {
@@ -1809,7 +1809,7 @@ main (int argc, char *argv[])
 	  grub_install_copy_file (imgfile, dst, 1);
 	  free (dst);
 	}
-
+      /* Fallthrough.  */
     case GRUB_INSTALL_PLATFORM_X86_64_EFI:
       if (efidir_is_mac)
 	{

@@ -238,7 +238,7 @@ grub_install_push_module (const char *val)
       if (modules.n_alloc < 16)
 	modules.n_alloc = 16;
       modules.entries = xrealloc (modules.entries,
-				  modules.n_alloc * sizeof (modules.entries));
+				  modules.n_alloc * sizeof (*modules.entries));
     }
   modules.entries[modules.n_entries++] = xstrdup (val);
   modules.entries[modules.n_entries] = NULL;
@@ -490,6 +490,7 @@ grub_install_make_image_wrap_file (const char *dir, const char *prefix,
 		  dir, prefix,
 		  outname, mkimage_target,
 		  compnames[compression], note ? "--note" : "", s);
+  free (s);
 
   tgt = grub_install_get_image_target (mkimage_target);
   if (!tgt)
