@@ -3143,7 +3143,7 @@ parse_bracket_exp (re_string_t *regexp, re_dfa_t *dfa, re_token_t *token,
 
   while (1)
     {
-      bracket_elem_t start_elem, end_elem;
+      bracket_elem_t start_elem = {0}, end_elem = {0};
       unsigned char start_name_buf[BRACKET_NAME_BUF_SIZE];
       unsigned char end_name_buf[BRACKET_NAME_BUF_SIZE];
       reg_errcode_t ret;
