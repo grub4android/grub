@@ -1606,9 +1606,9 @@ SUFFIX (load_image) (const char *kernel_path, size_t *exec_size,
 	    symtab_section = s;
 	    break;
 	  }
-
       if (! symtab_section)
 	grub_util_error ("%s", _("no symbol table"));
+
     }
   else
     {
