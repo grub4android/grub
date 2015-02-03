@@ -341,3 +341,31 @@ grub_uboot_input_getkey (void)
 
   return code;
 }
+
+void
+grub_uboot_boot_update_addresses (struct boot_img_hdr *hdr, int is_arm64)
+{
+  grub_uboot_syscall (API_BOOT_UPDATE_ADDRESSES, NULL, hdr, is_arm64);
+}
+
+int
+grub_uboot_boot_create_tags (struct tags_info *info)
+{
+  int retval;
+
+  if (!grub_uboot_syscall (API_BOOT_CREATE_TAGS, &retval, info))
+    return 0;
+
+  return retval;
+}
+
+int
+grub_uboot_boot_execute (void* addr, int machtype, void* atags)
+{
+  int retval;
+
+  if (!grub_uboot_syscall (API_BOOT_EXECUTE, &retval, addr, machtype, atags))
+    return 0;
+
+  return retval;
+}
