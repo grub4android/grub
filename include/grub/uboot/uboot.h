@@ -23,6 +23,7 @@
 #include <grub/types.h>
 #include <grub/dl.h>
 #include <grub/uboot/api_public.h>
+#include <grub/android.h>
 
 /* Functions.  */
 void grub_uboot_mm_init (void);
@@ -90,5 +91,10 @@ grub_addr_t EXPORT_FUNC (grub_uboot_display_fb_get) (void);
 void EXPORT_FUNC (grub_uboot_display_fb_flush) (void);
 
 int EXPORT_FUNC (grub_uboot_input_getkey) (void);
+
+void EXPORT_FUNC (grub_uboot_boot_update_addresses) (struct boot_img_hdr *
+						     hdr, int is_arm64);
+int EXPORT_FUNC (grub_uboot_boot_create_tags) (struct tags_info * info);
+int EXPORT_FUNC (grub_uboot_boot_execute) (void* addr, int machtype, void* atags);
 
 #endif /* ! GRUB_UBOOT_UBOOT_HEADER */

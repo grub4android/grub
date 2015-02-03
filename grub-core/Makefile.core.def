@@ -1722,6 +1722,12 @@ module = {
 };
 
 module = {
+  name = android;
+  common = loader/android.c;
+  enable = uboot;
+};
+
+module = {
   name = mmap;
   common = mmap/mmap.c;
   x86 = mmap/i386/uppermem.c;
