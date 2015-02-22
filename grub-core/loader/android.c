@@ -441,7 +441,6 @@ android_boot (void)
   else
     linuxmain = (void*) bootinfo.hdr->kernel_addr;
 
-  grub_arm_disable_caches_mmu ();
   grub_printf
     ("Booting kernel @ %p, ramdisk @ 0x%08x (%d), tags/device tree @ 0x%08x\n",
      linuxmain, bootinfo.hdr->ramdisk_addr, bootinfo.hdr->ramdisk_size,
