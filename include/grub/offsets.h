@@ -120,7 +120,7 @@
 
 #define GRUB_KERNEL_ARM_UBOOT_MOD_ALIGN 	0x8
 #define GRUB_KERNEL_ARM_UBOOT_TOTAL_MODULE_SIZE	0x4
-#define GRUB_KERNEL_ARM_UBOOT_LINK_ADDR		0x08000000
+#define GRUB_KERNEL_ARM_UBOOT_LINK_ADDR		0xc0000000
 
 /* Minimal gap between _end and the start of the modules.  It's a hack
    for PowerMac to prevent "CLAIM failed" error.  The real fix is to
