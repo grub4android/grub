@@ -19,8 +19,15 @@
 #ifndef GRUB_LOADER_MACHINE_HEADER
 #define GRUB_LOADER_MACHINE_HEADER	1
 
+typedef void *(*grub_efi_mmap_iteration_cb) (void *,
+					     grub_efi_physical_address_t,
+					     grub_efi_uint64_t);
+
 grub_err_t EXPORT_FUNC (grub_efi_prepare_platform) (void);
 void * EXPORT_FUNC (grub_efi_allocate_loader_memory) (grub_uint32_t min_offset,
 						      grub_uint32_t size);
+void *EXPORT_FUNC (grub_efi_iterate_memory_map) (void *pdata,
+						 grub_efi_mmap_iteration_cb
+						 cb);
 
 #endif /* ! GRUB_LOADER_MACHINE_HEADER */

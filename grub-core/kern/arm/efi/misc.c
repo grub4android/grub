@@ -24,6 +24,10 @@
 #include <grub/efi/efi.h>
 #include <grub/machine/loader.h>
 
+#define GRUB_EFI_PAGE_SHIFT	12
+#define BYTES_TO_PAGES(bytes)   (((bytes) + 0xfff) >> GRUB_EFI_PAGE_SHIFT)
+#define PAGES_TO_BYTES(pages)	((pages) << GRUB_EFI_PAGE_SHIFT)
+
 static inline grub_size_t
 page_align (grub_size_t size)
 {
@@ -169,6 +173,67 @@ grub_efi_allocate_loader_memory (grub_uint32_t min_offset, grub_uint32_t size)
  fail:
   grub_free (mmap);
   return NULL;
+}
+
+void *
+grub_efi_iterate_memory_map (void *pdata, grub_efi_mmap_iteration_cb cb)
+{
+  grub_efi_uintn_t desc_size;
+  grub_efi_memory_descriptor_t *mmap, *mmap_end;
+  grub_efi_uintn_t mmap_size, tmp_mmap_size;
+  grub_efi_memory_descriptor_t *desc;
+
+  mmap_size = find_mmap_size ();
+  if (!mmap_size)
+    return pdata;
+
+  mmap = grub_malloc (mmap_size);
+  if (!mmap)
+    return pdata;
+
+  tmp_mmap_size = mmap_size;
+  if (grub_efi_get_memory_map (&tmp_mmap_size, mmap, 0, &desc_size, 0) <= 0)
+    {
+      grub_error (GRUB_ERR_IO, "cannot get memory map");
+      goto fail;
+    }
+
+  mmap_end = NEXT_MEMORY_DESCRIPTOR (mmap, tmp_mmap_size);
+
+  grub_efi_physical_address_t start = mmap->physical_start;
+  grub_efi_physical_address_t size = 0;
+  grub_uint8_t is_reserved = (mmap->type == GRUB_EFI_RESERVED_MEMORY_TYPE);
+
+  for (desc = mmap; desc < mmap_end;
+       desc = NEXT_MEMORY_DESCRIPTOR (desc, desc_size))
+    {
+      grub_uint8_t local_is_reserved =
+	(desc->type == GRUB_EFI_RESERVED_MEMORY_TYPE);
+
+      if (desc->physical_start != start + size
+	  || is_reserved != local_is_reserved)
+	{
+	  if (!is_reserved)
+	    pdata = cb (pdata, start, size);
+	  start = desc->physical_start;
+	  size = 0;
+	  is_reserved = local_is_reserved;
+	}
+
+      size += PAGES_TO_BYTES (desc->num_pages);
+    }
+
+  if (size > 0)
+    {
+      pdata = cb (pdata, start, size);
+    }
+
+  grub_free (mmap);
+  return pdata;
+
+fail:
+  grub_free (mmap);
+  return pdata;
 }
 
 grub_err_t

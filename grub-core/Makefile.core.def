@@ -1666,6 +1666,15 @@ module = {
 };
 
 module = {
+  name = android;
+  arm = loader/arm/android.c;
+  fdt = lib/fdt.c;
+  common = lib/cmdline.c;
+  common = lib/cpio.c;
+  enable = noemu;
+};
+
+module = {
   name = xnu;
   x86 = loader/xnu_resume.c;
   x86 = loader/i386/xnu.c;
